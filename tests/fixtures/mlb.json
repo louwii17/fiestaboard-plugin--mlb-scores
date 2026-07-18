@@ -3,7 +3,16 @@
     "gamePk": 123,
     "gameDate": "2026-07-14T23:07:00Z",
     "status": {"abstractGameState": "Live", "detailedState": "In Progress"},
-    "linescore": {"currentInning": 7, "currentInningOrdinal": "7th", "inningState": "Top", "outs": 1},
+    "linescore": {
+      "currentInning": 7,
+      "currentInningOrdinal": "7th",
+      "inningState": "Top",
+      "outs": 1,
+      "offense": {
+        "first": {"id": 101, "fullName": "Runner One"},
+        "third": {"id": 103, "fullName": "Runner Three"}
+      }
+    },
     "teams": {
       "away": {"score": 4, "team": {"id": 141, "name": "Toronto Blue Jays", "teamName": "Blue Jays", "abbreviation": "TOR"}},
       "home": {"score": 3, "team": {"id": 147, "name": "New York Yankees", "teamName": "Yankees", "abbreviation": "NYY"}}

@@ -178,6 +178,9 @@ class MlbScoresPlugin(PluginBase):
         outs = game.details.get("outs")
         outs_text = "" if outs is None else f"{outs} {'OUT' if outs == 1 else 'OUTS'}"
         outs_color_indicator, outs_symbol_indicator = outs_indicators(outs)
+        first_base_occupied = bool(game.details.get("first_base_occupied"))
+        second_base_occupied = bool(game.details.get("second_base_occupied"))
+        third_base_occupied = bool(game.details.get("third_base_occupied"))
         inning_info = " ".join(part for part in (inning_half, str(inning_number or ""), outs_text) if part)
         return {
             "game_id": game.id,
@@ -206,6 +209,12 @@ class MlbScoresPlugin(PluginBase):
             "outs_text": outs_text,
             "outs_color_indicator": outs_color_indicator,
             "outs_symbol_indicator": outs_symbol_indicator,
+            "first_base_occupied": first_base_occupied,
+            "second_base_occupied": second_base_occupied,
+            "third_base_occupied": third_base_occupied,
+            "first_base_indicator": "{65}" if first_base_occupied else "-",
+            "second_base_indicator": "{65}" if second_base_occupied else "-",
+            "third_base_indicator": "{65}" if third_base_occupied else "-",
             "inning_info": board_text(inning_info)[:width],
             "favorite": bool(game.details.get("favorite")),
             "formatted": format_score(game, width),
@@ -221,6 +230,9 @@ class MlbScoresPlugin(PluginBase):
             "home_nickname": "", "home_score": None, "home_color": "", "home_result_color": "",
             "inning_half": "", "inning_number": None, "inning_ordinal": "", "outs": None,
             "outs_text": "", "outs_color_indicator": "", "outs_symbol_indicator": "",
+            "first_base_occupied": False, "second_base_occupied": False,
+            "third_base_occupied": False, "first_base_indicator": "",
+            "second_base_indicator": "", "third_base_indicator": "",
             "inning_info": "", "formatted": "", "progress": "",
         }
 

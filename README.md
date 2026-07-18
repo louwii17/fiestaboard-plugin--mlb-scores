@@ -104,7 +104,23 @@ Useful building blocks include:
 {{mlb_scores.outs_text}}
 {{mlb_scores.outs_color_indicator}}
 {{mlb_scores.outs_symbol_indicator}}
+{{mlb_scores.first_base_occupied}}
+{{mlb_scores.second_base_occupied}}
+{{mlb_scores.third_base_occupied}}
+{{mlb_scores.first_base_indicator}}
+{{mlb_scores.second_base_indicator}}
+{{mlb_scores.third_base_indicator}}
 {{mlb_scores.inning_info}}
+```
+
+Each base indicator is a yellow tile (`{65}`) when occupied and a dash when
+empty. The matching Boolean can be used with `IF()` for a custom color or
+placeholder. To draw the traditional diamond yourself, place second base above
+third and first base:
+
+```text
+{{= PAD("", 7) & mlb_scores.second_base_indicator }}
+{{= PAD("", 5) & mlb_scores.third_base_indicator & " " & mlb_scores.first_base_indicator }}
 ```
 
 The three-position outs indicators render as follows:
