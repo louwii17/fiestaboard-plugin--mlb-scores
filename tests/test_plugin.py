@@ -59,6 +59,12 @@ def test_fetch_exposes_mlb_building_blocks(monkeypatch):
     assert result.data["home_color"] == "{67}"
     assert result.data["inning_number"] == 7
     assert result.data["inning_info"] == "TOP 7 1 OUT"
+    assert result.data["outs_color_indicator"] == "{63}{69}{69}"
+    assert result.data["outs_symbol_indicator"] == "O--"
+    assert "team1" not in result.data
+    assert "team2" not in result.data
+    assert "score1" not in result.data
+    assert "score2" not in result.data
 
 
 def test_favorites_only_filters_games(monkeypatch):
@@ -81,8 +87,8 @@ def test_live_favorite_emits_note_safe_trigger(monkeypatch):
     assert trigger.data["home_nickname"] == "BLUE JAYS"
     assert trigger.formatted_lines == [
         "TOP 7     1 OUT",
-        "{67} YANKEES     2",
-        "{67} BLUE JAYS   3",
+        "{67} NYY         2",
+        "{67} TOR         3",
     ]
 
 

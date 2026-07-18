@@ -1,7 +1,7 @@
 {
   "id": "mlb_scores",
   "name": "MLB Scores",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Fast live MLB scores with favorite-team page triggers for Vestaboard",
   "author": "Christopher Louie",
   "repository": "https://github.com/louwii17/fiestaboard-plugin--mlb-scores",
@@ -82,10 +82,6 @@
       "game_id": {"description": "Stable MLB game identifier", "type": "string", "max_length": 12, "group": "latest", "example": "777123"},
       "state": {"description": "Normalized game state", "type": "string", "max_length": 12, "group": "latest", "example": "live"},
       "status": {"description": "MLB game status", "type": "string", "max_length": 20, "group": "latest", "example": "In Progress"},
-      "team1": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
-      "team2": {"description": "Home team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "NYY"},
-      "score1": {"description": "Away score", "type": "number", "max_length": 3, "group": "latest", "example": "4"},
-      "score2": {"description": "Home score", "type": "number", "max_length": 3, "group": "latest", "example": "3"},
       "away_short": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
       "away_name": {"description": "Away team full name", "type": "string", "max_length": 30, "group": "latest", "example": "Toronto Blue Jays"},
       "away_nickname": {"description": "Away team name without its city", "type": "string", "max_length": 16, "group": "latest", "example": "Blue Jays"},
@@ -103,6 +99,8 @@
       "inning_ordinal": {"description": "Current inning ordinal", "type": "string", "max_length": 4, "group": "latest", "example": "7TH"},
       "outs": {"description": "Current number of outs", "type": "number", "max_length": 1, "group": "latest", "example": "1"},
       "outs_text": {"description": "Board-ready outs", "type": "string", "max_length": 6, "group": "display", "example": "1 OUT"},
+      "outs_color_indicator": {"description": "Three out tiles: red for recorded outs and white for remaining outs", "type": "string", "max_length": 12, "group": "display", "example": "{63}{69}{69}"},
+      "outs_symbol_indicator": {"description": "Three-character outs indicator using O and -", "type": "string", "max_length": 3, "group": "display", "example": "O--"},
       "inning_info": {"description": "Board-ready inning and outs", "type": "string", "max_length": 15, "group": "display", "example": "TOP 7 1 OUT"},
       "formatted": {"description": "Board-ready score line", "type": "string", "max_length": 22, "group": "display", "example": "TOR  4-3  NYY"},
       "progress": {"description": "Board-ready game progress", "type": "string", "max_length": 22, "group": "display", "example": "TOP 7TH"},
@@ -112,7 +110,7 @@
     "arrays": {
       "games": {
         "label_field": "formatted",
-        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "team1", "team2", "team1_full", "team2_full", "score1", "score2", "team1_color", "team2_color", "team1_result_color", "team2_result_color", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "inning_info", "favorite", "formatted", "progress"]
+        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_color_indicator", "outs_symbol_indicator", "inning_info", "favorite", "formatted", "progress"]
       }
     }
   },
