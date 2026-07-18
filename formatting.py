@@ -112,3 +112,13 @@ def result_colors(game: Game) -> tuple[str, str]:
 def team_color(abbreviation: str) -> str:
     """Return the closest Vestaboard tile for a franchise's primary colour."""
     return TEAM_COLORS.get(board_text(abbreviation), "{67}")
+
+
+def outs_indicators(outs: int | None) -> tuple[str, str]:
+    """Return three-position color-tile and text indicators for the outs."""
+    if outs is None:
+        return "", ""
+    recorded = max(0, min(3, outs))
+    color_indicator = "{63}" * recorded + "{69}" * (3 - recorded)
+    symbol_indicator = "O" * recorded + "-" * (3 - recorded)
+    return color_indicator, symbol_indicator

@@ -95,12 +95,23 @@ Useful building blocks include:
 {{mlb_scores.inning_ordinal}}
 {{mlb_scores.outs}}
 {{mlb_scores.outs_text}}
+{{mlb_scores.outs_color_indicator}}
+{{mlb_scores.outs_symbol_indicator}}
 {{mlb_scores.inning_info}}
 ```
 
-Compatibility aliases `team1`, `team2`, `score1`, and `score2` refer to the
-away and home teams of the highest-priority game. Multiple games are available
-under `mlb_scores.games`.
+The three-position outs indicators render as follows:
+
+| Outs | Color tiles | Symbols |
+| --- | --- | --- |
+| 0 | `{69}{69}{69}` | `---` |
+| 1 | `{63}{69}{69}` | `O--` |
+| 2 | `{63}{63}{69}` | `OO-` |
+| 3 | `{63}{63}{63}` | `OOO` |
+
+Use the explicit `away_*` and `home_*` fields so the side and display format
+remain unambiguous across live updates. Multiple games are available under
+`mlb_scores.games`.
 
 ## Development tests
 

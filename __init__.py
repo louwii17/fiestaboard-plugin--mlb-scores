@@ -13,6 +13,7 @@ from .formatting import (
     format_progress,
     format_score,
     game_datetime,
+    outs_indicators,
     result_colors,
     team_abbreviation,
     team_color,
@@ -181,6 +182,7 @@ class MlbScoresPlugin(PluginBase):
         inning_ordinal = board_text(str(game.details.get("inning_ordinal") or ""))
         outs = game.details.get("outs")
         outs_text = "" if outs is None else f"{outs} {'OUT' if outs == 1 else 'OUTS'}"
+        outs_color_indicator, outs_symbol_indicator = outs_indicators(outs)
         inning_info = " ".join(part for part in (inning_half, str(inning_number or ""), outs_text) if part)
         return {
             "game_id": game.id,
@@ -190,16 +192,6 @@ class MlbScoresPlugin(PluginBase):
             "date": date,
             "time": local_time,
             "start_time": game.start_time.isoformat(),
-            "team1": away_short,
-            "team2": home_short,
-            "team1_full": game.away.name,
-            "team2_full": game.home.name,
-            "score1": game.away.score,
-            "score2": game.home.score,
-            "team1_color": away_color,
-            "team2_color": home_color,
-            "team1_result_color": away_result_color,
-            "team2_result_color": home_result_color,
             "away_short": away_short,
             "away_name": game.away.name,
             "away_nickname": away_nickname,
@@ -217,6 +209,8 @@ class MlbScoresPlugin(PluginBase):
             "inning_ordinal": inning_ordinal,
             "outs": outs,
             "outs_text": outs_text,
+            "outs_color_indicator": outs_color_indicator,
+            "outs_symbol_indicator": outs_symbol_indicator,
             "inning_info": board_text(inning_info)[:width],
             "favorite": bool(game.details.get("favorite")),
             "formatted": format_score(game, width),
@@ -227,13 +221,12 @@ class MlbScoresPlugin(PluginBase):
     def _empty_game() -> dict[str, Any]:
         return {
             "game_id": "", "state": "", "status": "", "phase": "", "date": "", "time": "",
-            "team1": "", "team2": "", "team1_full": "", "team2_full": "",
-            "score1": None, "score2": None, "team1_color": "", "team2_color": "",
             "away_short": "", "away_name": "", "away_nickname": "", "away_score": None,
             "away_color": "", "away_result_color": "", "home_short": "", "home_name": "",
             "home_nickname": "", "home_score": None, "home_color": "", "home_result_color": "",
             "inning_half": "", "inning_number": None, "inning_ordinal": "", "outs": None,
-            "outs_text": "", "inning_info": "", "formatted": "", "progress": "",
+            "outs_text": "", "outs_color_indicator": "", "outs_symbol_indicator": "",
+            "inning_info": "", "formatted": "", "progress": "",
         }
 
     @staticmethod
@@ -253,10 +246,10 @@ class MlbScoresPlugin(PluginBase):
     @staticmethod
     def _team_line(game: dict[str, Any], side: str) -> str:
         color = str(game.get(f"{side}_color") or "")
-        nickname = str(game.get(f"{side}_nickname") or game.get(f"{side}_short") or "")
+        abbreviation = str(game.get(f"{side}_short") or "")
         score = game.get(f"{side}_score")
         score_text = "?" if score is None else str(score)
-        return f"{color} {nickname[:11].ljust(11)}{score_text.rjust(2)}"
+        return f"{color} {abbreviation[:11].ljust(11)}{score_text.rjust(2)}"
 
     @staticmethod
     def _inning_line(game: dict[str, Any]) -> str:

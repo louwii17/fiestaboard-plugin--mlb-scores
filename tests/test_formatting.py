@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from plugins.mlb_scores.formatting import board_text, format_progress, format_score, result_colors, team_abbreviation, team_color
+from plugins.mlb_scores.formatting import board_text, format_progress, format_score, outs_indicators, result_colors, team_abbreviation, team_color
 from plugins.mlb_scores.models import Game, Team, as_int, parse_datetime
 
 
@@ -39,6 +39,14 @@ def test_result_colors_and_model_helpers():
     assert parse_datetime("2026-07-14T12:00:00Z").tzinfo is not None
     assert game().is_live
     assert team_color("TOR") == "{67}"
+
+
+def test_outs_indicators():
+    assert outs_indicators(None) == ("", "")
+    assert outs_indicators(0) == ("{69}{69}{69}", "---")
+    assert outs_indicators(1) == ("{63}{69}{69}", "O--")
+    assert outs_indicators(2) == ("{63}{63}{69}", "OO-")
+    assert outs_indicators(3) == ("{63}{63}{63}", "OOO")
 
 
 def test_unknown_state_is_normalized():
