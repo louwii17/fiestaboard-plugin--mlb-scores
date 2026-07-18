@@ -116,11 +116,20 @@ def team_color(abbreviation: str) -> str:
     return TEAM_COLORS.get(board_text(abbreviation), "{67}")
 
 
-def outs_indicators(outs: int | None) -> tuple[str, str]:
-    """Return three-position color-tile and text indicators for the outs."""
+def indicator_cell(value: object, default: str) -> str:
+    """Return one literal board character or one numeric VBML character code."""
+    text = str(value) if value is not None else ""
+    if len(text) == 1:
+        return text
+    match = re.fullmatch(r"\{(\d{1,2})\}", text)
+    if match and 0 <= int(match.group(1)) <= 71:
+        return text
+    return default
+
+
+def outs_indicator(outs: int | None, on: str = "{69}", off: str = ".") -> str:
+    """Return a configurable three-position indicator for the outs."""
     if outs is None:
-        return "", ""
+        return ""
     recorded = max(0, min(3, outs))
-    color_indicator = "{69}" * recorded + "-" * (3 - recorded)
-    symbol_indicator = "O" * recorded + "-" * (3 - recorded)
-    return color_indicator, symbol_indicator
+    return on * recorded + off * (3 - recorded)

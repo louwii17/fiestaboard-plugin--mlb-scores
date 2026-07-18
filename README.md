@@ -73,7 +73,7 @@ This 15 × 3 template keeps the outs and scores on the trailing edge, uses
 city-free team nicknames, and reserves two cells for each score:
 
 ```text
-{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_ordinal, 12) & mlb_scores.outs_color_indicator }}
+{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_ordinal, 12) & mlb_scores.outs_indicator }}
 {{= mlb_scores.away_color & " " & PAD(mlb_scores.away_nickname, 11) & PADLEFT(mlb_scores.away_score, 2) }}
 {{= mlb_scores.home_color & " " & PAD(mlb_scores.home_nickname, 11) & PADLEFT(mlb_scores.home_score, 2) }}
 ```
@@ -102,8 +102,7 @@ Useful building blocks include:
 {{mlb_scores.inning_ordinal}}
 {{mlb_scores.outs}}
 {{mlb_scores.outs_text}}
-{{mlb_scores.outs_color_indicator}}
-{{mlb_scores.outs_symbol_indicator}}
+{{mlb_scores.outs_indicator}}
 {{mlb_scores.first_base_occupied}}
 {{mlb_scores.second_base_occupied}}
 {{mlb_scores.third_base_occupied}}
@@ -113,24 +112,27 @@ Useful building blocks include:
 {{mlb_scores.inning_info}}
 ```
 
-Each base indicator is a yellow tile (`{65}`) when occupied and a dash when
-empty. The matching Boolean can be used with `IF()` for a custom color or
-placeholder. To draw the traditional diamond yourself, place second base above
-third and first base:
+By default, each base indicator is a yellow tile (`{65}`) when occupied and a
+period when empty. The outs indicator defaults to a white tile (`{69}`) for a
+recorded out and a period for an open position. Change the on/off markers under
+the integration settings using one character or a Vestaboard code such as
+`{63}`. The matching base Boolean can still be used with `IF()` for page-specific
+styling. To draw the traditional diamond yourself, place second base above third
+and first base:
 
 ```text
 {{= PAD("", 7) & mlb_scores.second_base_indicator }}
 {{= PAD("", 5) & mlb_scores.third_base_indicator & " " & mlb_scores.first_base_indicator }}
 ```
 
-The three-position outs indicators render as follows:
+With the default markers, the three-position outs indicator renders as follows:
 
-| Outs | Color tiles | Symbols |
-| --- | --- | --- |
-| 0 | `---` | `---` |
-| 1 | `{69}--` | `O--` |
-| 2 | `{69}{69}-` | `OO-` |
-| 3 | `{69}{69}{69}` | `OOO` |
+| Outs | Indicator |
+| --- | --- |
+| 0 | `...` |
+| 1 | `{69}..` |
+| 2 | `{69}{69}.` |
+| 3 | `{69}{69}{69}` |
 
 Use the explicit `away_*` and `home_*` fields so the side and display format
 remain unambiguous across live updates. Multiple games are available under

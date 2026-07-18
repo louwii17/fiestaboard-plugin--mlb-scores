@@ -46,6 +46,9 @@ def test_validate_config():
     assert plugin.validate_config({"favorite_teams": ["TOR"], "max_games": 3, "timezone": "UTC"}) == []
     errors = plugin.validate_config({"favorite_teams": 42, "max_games": 99, "timezone": "bad/time"})
     assert len(errors) == 3
+    assert plugin.validate_config({"timezone": "UTC", "outs_indicator_on": "TOO LONG"}) == [
+        "outs_indicator_on must be one character or one Vestaboard code such as {65}"
+    ]
 
 
 def test_fetch_exposes_mlb_building_blocks(monkeypatch):
@@ -63,18 +66,34 @@ def test_fetch_exposes_mlb_building_blocks(monkeypatch):
     assert result.data["home_color"] == "{67}"
     assert result.data["inning_number"] == 7
     assert result.data["inning_info"] == "TOP 7 1 OUT"
-    assert result.data["outs_color_indicator"] == "{69}--"
-    assert result.data["outs_symbol_indicator"] == "O--"
+    assert result.data["outs_indicator"] == "{69}.."
     assert result.data["first_base_occupied"] is True
     assert result.data["second_base_occupied"] is False
     assert result.data["third_base_occupied"] is True
     assert result.data["first_base_indicator"] == "{65}"
-    assert result.data["second_base_indicator"] == "-"
+    assert result.data["second_base_indicator"] == "."
     assert result.data["third_base_indicator"] == "{65}"
     assert "team1" not in result.data
     assert "team2" not in result.data
     assert "score1" not in result.data
     assert "score2" not in result.data
+
+
+def test_custom_indicator_markers(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {
+        "favorite_teams": ["TOR"],
+        "timezone": "UTC",
+        "outs_indicator_on": "X",
+        "outs_indicator_off": "-",
+        "base_indicator_on": "{66}",
+        "base_indicator_off": " ",
+    }
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([make_game()]))
+    result = plugin.fetch_data()
+    assert result.data["outs_indicator"] == "X--"
+    assert result.data["first_base_indicator"] == "{66}"
+    assert result.data["second_base_indicator"] == " "
 
 
 def test_favorites_only_filters_games(monkeypatch):
