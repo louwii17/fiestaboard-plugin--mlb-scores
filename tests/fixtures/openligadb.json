@@ -1,0 +1,12 @@
+[
+  {
+    "matchID": 901,
+    "matchDateTimeUTC": "2026-07-14T19:00:00Z",
+    "matchIsFinished": true,
+    "lastUpdateDateTime": "2026-07-14T21:00:00Z",
+    "group": {"groupName": "Group B"},
+    "team1": {"teamId": 1, "teamName": "Canada", "shortName": "CAN"},
+    "team2": {"teamId": 2, "teamName": "United States", "shortName": "USA"},
+    "matchResults": [{"resultOrder": 1, "pointsTeam1": 2, "pointsTeam2": 1}]
+  }
+]
