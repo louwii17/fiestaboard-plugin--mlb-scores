@@ -110,11 +110,6 @@ class MlbScoresPlugin(PluginBase):
                     priority=50,
                     duration_seconds=duration,
                     data=game,
-                    formatted_lines=[
-                        self._inning_line(game),
-                        self._team_line(game, "away"),
-                        self._team_line(game, "home"),
-                    ],
                 )
             )
         return triggers
@@ -242,27 +237,6 @@ class MlbScoresPlugin(PluginBase):
             if len(lines) >= height:
                 break
         return lines[:height]
-
-    @staticmethod
-    def _team_line(game: dict[str, Any], side: str) -> str:
-        color = str(game.get(f"{side}_color") or "")
-        abbreviation = str(game.get(f"{side}_short") or "")
-        score = game.get(f"{side}_score")
-        score_text = "?" if score is None else str(score)
-        return f"{color} {abbreviation[:11].ljust(11)}{score_text.rjust(2)}"
-
-    @staticmethod
-    def _inning_line(game: dict[str, Any]) -> str:
-        half = str(game.get("inning_half") or "")
-        number = game.get("inning_number")
-        outs = game.get("outs")
-        inning = f"{half} {'' if number is None else number}".strip()
-        if outs is None:
-            outs_label = "? OUTS"
-        else:
-            outs_label = f"{outs} {'OUT' if outs == 1 else 'OUTS'}"
-        return f"{inning[:9].ljust(9)}{outs_label.rjust(6)}"[:15]
-
 
 Plugin = MlbScoresPlugin
 
