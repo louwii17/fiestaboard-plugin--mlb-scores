@@ -1,7 +1,7 @@
 {
   "id": "mlb_scores",
   "name": "MLB Scores",
-  "version": "1.2.0",
+  "version": "1.6.0",
   "description": "Fast live MLB scores with favorite-team page triggers for Vestaboard",
   "author": "Christopher Louie",
   "repository": "https://github.com/louwii17/fiestaboard-plugin--mlb-scores",
@@ -39,7 +39,7 @@
       "trigger_page_id": {
         "type": "string",
         "title": "Live game page",
-        "description": "Template page shown automatically while a favorite team is playing",
+        "description": "Template page shown automatically while a favorite team is playing; required for live-game takeovers",
         "ui:widget": "page-picker"
       },
       "max_games": {
@@ -99,8 +99,14 @@
       "inning_ordinal": {"description": "Current inning ordinal", "type": "string", "max_length": 4, "group": "latest", "example": "7TH"},
       "outs": {"description": "Current number of outs", "type": "number", "max_length": 1, "group": "latest", "example": "1"},
       "outs_text": {"description": "Board-ready outs", "type": "string", "max_length": 6, "group": "display", "example": "1 OUT"},
-      "outs_color_indicator": {"description": "Three out tiles: red for recorded outs and white for remaining outs", "type": "string", "max_length": 12, "group": "display", "example": "{63}{69}{69}"},
+      "outs_color_indicator": {"description": "Three-position outs indicator: white tiles for recorded outs and dashes for open positions", "type": "string", "max_length": 12, "group": "display", "example": "{69}--"},
       "outs_symbol_indicator": {"description": "Three-character outs indicator using O and -", "type": "string", "max_length": 3, "group": "display", "example": "O--"},
+      "first_base_occupied": {"description": "Whether a runner occupies first base", "type": "boolean", "max_length": 5, "group": "latest", "example": true},
+      "second_base_occupied": {"description": "Whether a runner occupies second base", "type": "boolean", "max_length": 5, "group": "latest", "example": false},
+      "third_base_occupied": {"description": "Whether a runner occupies third base", "type": "boolean", "max_length": 5, "group": "latest", "example": true},
+      "first_base_indicator": {"description": "Yellow tile when first base is occupied, otherwise a dash", "type": "string", "max_length": 4, "group": "display", "example": "{65}"},
+      "second_base_indicator": {"description": "Yellow tile when second base is occupied, otherwise a dash", "type": "string", "max_length": 4, "group": "display", "example": "-"},
+      "third_base_indicator": {"description": "Yellow tile when third base is occupied, otherwise a dash", "type": "string", "max_length": 4, "group": "display", "example": "{65}"},
       "inning_info": {"description": "Board-ready inning and outs", "type": "string", "max_length": 15, "group": "display", "example": "TOP 7 1 OUT"},
       "formatted": {"description": "Board-ready score line", "type": "string", "max_length": 22, "group": "display", "example": "TOR  4-3  NYY"},
       "progress": {"description": "Board-ready game progress", "type": "string", "max_length": 22, "group": "display", "example": "TOP 7TH"},
@@ -110,7 +116,7 @@
     "arrays": {
       "games": {
         "label_field": "formatted",
-        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_color_indicator", "outs_symbol_indicator", "inning_info", "favorite", "formatted", "progress"]
+        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_color_indicator", "outs_symbol_indicator", "first_base_occupied", "second_base_occupied", "third_base_occupied", "first_base_indicator", "second_base_indicator", "third_base_indicator", "inning_info", "favorite", "formatted", "progress"]
       }
     }
   },

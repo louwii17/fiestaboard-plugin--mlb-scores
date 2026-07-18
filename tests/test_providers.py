@@ -14,6 +14,9 @@ def test_mlb_normalizes_live_game(fixture, fake_session):
     assert (game.sport, game.state, game.phase) == ("MLB", "live", "TOP 7TH")
     assert (game.away.abbreviation, game.away.score) == ("TOR", 4)
     assert (game.away.short_name, game.home.short_name) == ("Blue Jays", "Yankees")
+    assert game.details["first_base_occupied"] is True
+    assert game.details["second_base_occupied"] is False
+    assert game.details["third_base_occupied"] is True
     assert session.calls[0][1]["params"]["sportId"] == 1
     assert session.calls[0][1]["params"]["startDate"] == "2026-07-13"
     assert session.calls[0][1]["params"]["endDate"] == "2026-07-15"
@@ -53,6 +56,15 @@ def test_mlb_status_variants(fixture, fake_session):
     assert provider._parse_game(raw).state == "final"
     raw["status"] = {"abstractGameState": "Preview", "detailedState": "Postponed"}
     assert provider._parse_game(raw).state == "postponed"
+
+
+def test_mlb_clears_bases_at_three_outs(fixture, fake_session):
+    raw = fixture("mlb")["dates"][0]["games"][0]
+    raw["linescore"]["outs"] = 3
+    game = MlbProvider(session=fake_session())._parse_game(raw)
+    assert game.details["first_base_occupied"] is False
+    assert game.details["second_base_occupied"] is False
+    assert game.details["third_base_occupied"] is False
 
 
 def test_base_provider_serves_stale_cache_on_failure(fixture, fake_session):

@@ -18,7 +18,11 @@ def make_game(state="live", favorite_name="Toronto Blue Jays", home_abbr="TOR"):
         state=state, status="Live", phase="TOP 7TH", clock="",
         home=Team("1", favorite_name, home_abbr, 3, "Blue Jays"),
         away=Team("2", "New York Yankees", "NYY", 2, "Yankees"),
-        details={"inning": 7, "inning_half": "Top", "inning_ordinal": "7th", "outs": 1},
+        details={
+            "inning": 7, "inning_half": "Top", "inning_ordinal": "7th", "outs": 1,
+            "first_base_occupied": True, "second_base_occupied": False,
+            "third_base_occupied": True,
+        },
     )
 
 
@@ -61,6 +65,12 @@ def test_fetch_exposes_mlb_building_blocks(monkeypatch):
     assert result.data["inning_info"] == "TOP 7 1 OUT"
     assert result.data["outs_color_indicator"] == "{63}{69}{69}"
     assert result.data["outs_symbol_indicator"] == "O--"
+    assert result.data["first_base_occupied"] is True
+    assert result.data["second_base_occupied"] is False
+    assert result.data["third_base_occupied"] is True
+    assert result.data["first_base_indicator"] == "{65}"
+    assert result.data["second_base_indicator"] == "-"
+    assert result.data["third_base_indicator"] == "{65}"
     assert "team1" not in result.data
     assert "team2" not in result.data
     assert "score1" not in result.data
@@ -123,4 +133,7 @@ def test_no_games_is_available_with_empty_array(monkeypatch):
     monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider())
     result = plugin.fetch_data()
     assert result.available and result.data["games"] == []
+    assert result.data["first_base_indicator"] == ""
+    assert result.data["second_base_indicator"] == ""
+    assert result.data["third_base_indicator"] == ""
     assert result.formatted_lines == ["MLB SCORES", "NO GAMES TODAY"]

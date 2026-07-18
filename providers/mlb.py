@@ -71,6 +71,9 @@ class MlbProvider(BaseProvider):
         linescore = raw.get("linescore") or {}
         inning_state = str(linescore.get("inningState", ""))
         inning_ordinal = str(linescore.get("currentInningOrdinal", ""))
+        outs = as_int(linescore.get("outs"))
+        offense = linescore.get("offense") or {}
+        show_bases = state in {"live", "delayed"} and outs != 3
         phase = " ".join(part for part in (inning_state, inning_ordinal) if part).upper()
         if state == "final":
             phase = "FINAL"
@@ -93,7 +96,10 @@ class MlbProvider(BaseProvider):
                 "inning": as_int(linescore.get("currentInning")),
                 "inning_half": inning_state,
                 "inning_ordinal": inning_ordinal,
-                "outs": as_int(linescore.get("outs")),
+                "outs": outs,
+                "first_base_occupied": show_bases and bool(offense.get("first")),
+                "second_base_occupied": show_bases and bool(offense.get("second")),
+                "third_base_occupied": show_bases and bool(offense.get("third")),
             },
         )
 
