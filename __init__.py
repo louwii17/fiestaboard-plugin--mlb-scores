@@ -13,7 +13,8 @@ from .formatting import (
     format_progress,
     format_score,
     game_datetime,
-    outs_indicators,
+    indicator_cell,
+    outs_indicator,
     result_colors,
     team_abbreviation,
     team_color,
@@ -52,6 +53,15 @@ class MlbScoresPlugin(PluginBase):
             ZoneInfo(str(config.get("timezone", "UTC")))
         except Exception:
             errors.append("Timezone must be a valid IANA name, such as America/Toronto")
+        indicator_defaults = {
+            "outs_indicator_on": "{69}",
+            "outs_indicator_off": ".",
+            "base_indicator_on": "{65}",
+            "base_indicator_off": ".",
+        }
+        for key, default in indicator_defaults.items():
+            if key in config and indicator_cell(config[key], default) != str(config[key]):
+                errors.append(f"{key} must be one character or one Vestaboard code such as {{65}}")
         return errors
 
     def on_config_change(self, old_config: dict[str, Any], new_config: dict[str, Any]) -> None:
@@ -73,7 +83,8 @@ class MlbScoresPlugin(PluginBase):
 
         width = int(getattr(self.board, "width", 22) or 22)
         timezone_name = str(self.config.get("timezone", "UTC"))
-        serialized = [self._serialize(game, width, timezone_name) for game in selected]
+        indicators = self._indicator_config()
+        serialized = [self._serialize(game, width, timezone_name, indicators) for game in selected]
         primary = serialized[0] if serialized else self._empty_game()
         data = {
             **primary,
@@ -122,6 +133,18 @@ class MlbScoresPlugin(PluginBase):
             )
         return self._provider
 
+    def _indicator_config(self) -> dict[str, str]:
+        defaults = {
+            "outs_indicator_on": "{69}",
+            "outs_indicator_off": ".",
+            "base_indicator_on": "{65}",
+            "base_indicator_off": ".",
+        }
+        return {
+            key: indicator_cell(self.config.get(key, default), default)
+            for key, default in defaults.items()
+        }
+
     def _filter_and_sort(self, games: list[Game], now: datetime) -> list[Game]:
         favorites_only = bool(self.config.get("favorites_only", False))
         result: list[Game] = []
@@ -163,7 +186,12 @@ class MlbScoresPlugin(PluginBase):
         return priority, favorite_rank, distance, game.start_time, game.id
 
     @staticmethod
-    def _serialize(game: Game, width: int, timezone_name: str) -> dict[str, Any]:
+    def _serialize(
+        game: Game,
+        width: int,
+        timezone_name: str,
+        indicators: dict[str, str],
+    ) -> dict[str, Any]:
         date, local_time = game_datetime(game, timezone_name)
         away_result_color, home_result_color = result_colors(game)
         away_short = team_abbreviation(game.away.name, game.away.abbreviation)
@@ -177,7 +205,11 @@ class MlbScoresPlugin(PluginBase):
         inning_ordinal = board_text(str(game.details.get("inning_ordinal") or ""))
         outs = game.details.get("outs")
         outs_text = "" if outs is None else f"{outs} {'OUT' if outs == 1 else 'OUTS'}"
-        outs_color_indicator, outs_symbol_indicator = outs_indicators(outs)
+        rendered_outs_indicator = outs_indicator(
+            outs,
+            indicators["outs_indicator_on"],
+            indicators["outs_indicator_off"],
+        )
         first_base_occupied = bool(game.details.get("first_base_occupied"))
         second_base_occupied = bool(game.details.get("second_base_occupied"))
         third_base_occupied = bool(game.details.get("third_base_occupied"))
@@ -207,14 +239,13 @@ class MlbScoresPlugin(PluginBase):
             "inning_ordinal": inning_ordinal,
             "outs": outs,
             "outs_text": outs_text,
-            "outs_color_indicator": outs_color_indicator,
-            "outs_symbol_indicator": outs_symbol_indicator,
+            "outs_indicator": rendered_outs_indicator,
             "first_base_occupied": first_base_occupied,
             "second_base_occupied": second_base_occupied,
             "third_base_occupied": third_base_occupied,
-            "first_base_indicator": "{65}" if first_base_occupied else "-",
-            "second_base_indicator": "{65}" if second_base_occupied else "-",
-            "third_base_indicator": "{65}" if third_base_occupied else "-",
+            "first_base_indicator": indicators["base_indicator_on"] if first_base_occupied else indicators["base_indicator_off"],
+            "second_base_indicator": indicators["base_indicator_on"] if second_base_occupied else indicators["base_indicator_off"],
+            "third_base_indicator": indicators["base_indicator_on"] if third_base_occupied else indicators["base_indicator_off"],
             "inning_info": board_text(inning_info)[:width],
             "favorite": bool(game.details.get("favorite")),
             "formatted": format_score(game, width),
@@ -229,7 +260,7 @@ class MlbScoresPlugin(PluginBase):
             "away_color": "", "away_result_color": "", "home_short": "", "home_name": "",
             "home_nickname": "", "home_score": None, "home_color": "", "home_result_color": "",
             "inning_half": "", "inning_number": None, "inning_ordinal": "", "outs": None,
-            "outs_text": "", "outs_color_indicator": "", "outs_symbol_indicator": "",
+            "outs_text": "", "outs_indicator": "",
             "first_base_occupied": False, "second_base_occupied": False,
             "third_base_occupied": False, "first_base_indicator": "",
             "second_base_indicator": "", "third_base_indicator": "",

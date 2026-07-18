@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from plugins.mlb_scores.formatting import board_text, format_progress, format_score, outs_indicators, result_colors, team_abbreviation, team_color
+from plugins.mlb_scores.formatting import board_text, format_progress, format_score, indicator_cell, outs_indicator, result_colors, team_abbreviation, team_color
 from plugins.mlb_scores.models import Game, Team, as_int, parse_datetime
 
 
@@ -46,12 +46,16 @@ def test_result_colors_and_model_helpers():
     assert team_color("CWS") == "{69}"
 
 
-def test_outs_indicators():
-    assert outs_indicators(None) == ("", "")
-    assert outs_indicators(0) == ("---", "---")
-    assert outs_indicators(1) == ("{69}--", "O--")
-    assert outs_indicators(2) == ("{69}{69}-", "OO-")
-    assert outs_indicators(3) == ("{69}{69}{69}", "OOO")
+def test_outs_indicator_and_custom_cells():
+    assert outs_indicator(None) == ""
+    assert outs_indicator(0) == "..."
+    assert outs_indicator(1) == "{69}.."
+    assert outs_indicator(2) == "{69}{69}."
+    assert outs_indicator(3) == "{69}{69}{69}"
+    assert outs_indicator(1, "X", "-") == "X--"
+    assert indicator_cell("{65}", ".") == "{65}"
+    assert indicator_cell(" ", ".") == " "
+    assert indicator_cell("TOO LONG", ".") == "."
 
 
 def test_unknown_state_is_normalized():
