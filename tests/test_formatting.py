@@ -39,14 +39,19 @@ def test_result_colors_and_model_helpers():
     assert parse_datetime("2026-07-14T12:00:00Z").tzinfo is not None
     assert game().is_live
     assert team_color("TOR") == "{67}"
+    assert team_color("MIL") == "{65}"
+    assert team_color("DET") == "{64}"
+    assert team_color("BAL") == "{64}"
+    assert team_color("COL") == "{68}"
+    assert team_color("CWS") == "{69}"
 
 
 def test_outs_indicators():
     assert outs_indicators(None) == ("", "")
-    assert outs_indicators(0) == ("{69}{69}{69}", "---")
-    assert outs_indicators(1) == ("{63}{69}{69}", "O--")
-    assert outs_indicators(2) == ("{63}{63}{69}", "OO-")
-    assert outs_indicators(3) == ("{63}{63}{63}", "OOO")
+    assert outs_indicators(0) == ("---", "---")
+    assert outs_indicators(1) == ("{69}--", "O--")
+    assert outs_indicators(2) == ("{69}{69}-", "OO-")
+    assert outs_indicators(3) == ("{69}{69}{69}", "OOO")
 
 
 def test_unknown_state_is_normalized():
