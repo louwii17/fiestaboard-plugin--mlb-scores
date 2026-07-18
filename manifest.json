@@ -1,9 +1,10 @@
 {
-  "id": "live_sports",
-  "name": "Live Sports",
-  "version": "0.2.1",
-  "description": "Live and scheduled FIFA World Cup, MLB, and NHL scores from sport-specific APIs",
+  "id": "mlb_scores",
+  "name": "MLB Scores",
+  "version": "1.0.0",
+  "description": "Fast live MLB scores with favorite-team page triggers for Vestaboard",
   "author": "Christopher Louie",
+  "repository": "https://github.com/louwii17/fiestaboard-plugin--mlb-scores",
   "documentation": "README.md",
   "icon": "trophy",
   "category": "data",
@@ -13,23 +14,12 @@
   "settings_schema": {
     "type": "object",
     "properties": {
-      "enabled": {"type": "boolean", "title": "Enable Live Sports", "default": false},
-      "sports": {
-        "type": "array", "title": "Sports", "default": ["MLB"],
-        "items": {"type": "string", "enum": ["FIFA", "MLB", "NHL"]},
-        "minItems": 1, "uniqueItems": true
+      "enabled": {
+        "type": "boolean",
+        "title": "Enable MLB Scores",
+        "default": false
       },
-      "fifa_provider": {
-        "type": "string", "title": "FIFA provider", "default": "openligadb",
-        "enum": ["openligadb", "api_sports"],
-        "enumNames": ["OpenLigaDB (free, no key)", "API-Sports (key required)"]
-      },
-      "api_sports_key": {
-        "type": "string", "title": "API-Sports key", "description": "Optional fallback, or required when API-Sports is selected",
-        "ui:widget": "password"
-      },
-      "fifa_teams": {"type": "string", "title": "Favorite FIFA teams", "description": "Comma-separated names or abbreviations, e.g. Canada,USA"},
-      "mlb_teams": {
+      "favorite_teams": {
         "type": "array",
         "title": "Favorite MLB teams",
         "description": "Choose the teams whose live games should take over the board",
@@ -40,37 +30,62 @@
         },
         "uniqueItems": true
       },
-      "nhl_teams": {"type": "string", "title": "Favorite NHL teams", "description": "Comma-separated names or abbreviations, e.g. TOR,MTL"},
-      "favorites_only": {"type": "boolean", "title": "Only show favorite teams", "default": false},
+      "favorites_only": {
+        "type": "boolean",
+        "title": "Only show favorite teams",
+        "description": "Hide other MLB games from normal page data",
+        "default": false
+      },
       "trigger_page_id": {
         "type": "string",
         "title": "Live game page",
         "description": "Template page shown automatically while a favorite team is playing",
         "ui:widget": "page-picker"
       },
-      "max_games_per_sport": {"type": "integer", "title": "Max games per sport", "default": 3, "minimum": 1, "maximum": 10},
-      "timezone": {"type": "string", "title": "Timezone", "default": "America/Toronto"},
-      "refresh_seconds": {"type": "integer", "title": "Live refresh interval", "description": "Seconds between checks near first pitch and during a live game", "default": 10, "minimum": 10, "maximum": 300}
-    },
-    "required": ["sports"]
+      "max_games": {
+        "type": "integer",
+        "title": "Maximum games",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 10
+      },
+      "timezone": {
+        "type": "string",
+        "title": "Timezone",
+        "default": "America/Toronto",
+        "ui:widget": "timezone"
+      },
+      "refresh_seconds": {
+        "type": "integer",
+        "title": "Live refresh interval",
+        "description": "Seconds between checks near first pitch and during a live game",
+        "default": 10,
+        "minimum": 10,
+        "maximum": 300
+      }
+    }
   },
   "env_vars": [
-    {"name": "LIVE_SPORTS_ENABLED", "required": false, "default": "false", "description": "Enable Live Sports"},
-    {"name": "LIVE_SPORTS_API_SPORTS_KEY", "required": false, "description": "Optional API-Sports football key"}
+    {
+      "name": "MLB_SCORES_ENABLED",
+      "required": false,
+      "default": "false",
+      "description": "Enable MLB Scores"
+    }
   ],
   "variables": {
-    "groups": {"latest": {"label": "Top Game"}, "display": {"label": "Display"}},
+    "groups": {
+      "latest": {"label": "Top Game"},
+      "display": {"label": "Display"}
+    },
     "simple": {
-      "sport": {"description": "Top game's sport", "type": "string", "max_length": 6, "group": "latest", "example": "MLB"},
+      "game_id": {"description": "Stable MLB game identifier", "type": "string", "max_length": 12, "group": "latest", "example": "777123"},
+      "state": {"description": "Normalized game state", "type": "string", "max_length": 12, "group": "latest", "example": "live"},
+      "status": {"description": "MLB game status", "type": "string", "max_length": 20, "group": "latest", "example": "In Progress"},
       "team1": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
       "team2": {"description": "Home team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "NYY"},
       "score1": {"description": "Away score", "type": "number", "max_length": 3, "group": "latest", "example": "4"},
       "score2": {"description": "Home score", "type": "number", "max_length": 3, "group": "latest", "example": "3"},
-      "status": {"description": "Game status", "type": "string", "max_length": 20, "group": "latest", "example": "In Progress"},
-      "state": {"description": "Normalized game state", "type": "string", "max_length": 12, "group": "latest", "example": "live"},
-      "formatted": {"description": "Board-ready score line", "type": "string", "max_length": 22, "group": "display", "example": "TOR  4-3  NYY"},
-      "progress": {"description": "Board-ready game progress", "type": "string", "max_length": 22, "group": "display", "example": "TOP 7TH"},
-      "game_id": {"description": "Stable MLB game identifier", "type": "string", "max_length": 12, "group": "latest", "example": "777123"},
       "away_short": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
       "away_name": {"description": "Away team full name", "type": "string", "max_length": 30, "group": "latest", "example": "Toronto Blue Jays"},
       "away_nickname": {"description": "Away team name without its city", "type": "string", "max_length": 16, "group": "latest", "example": "Blue Jays"},
@@ -88,28 +103,36 @@
       "inning_ordinal": {"description": "Current inning ordinal", "type": "string", "max_length": 4, "group": "latest", "example": "7TH"},
       "outs": {"description": "Current number of outs", "type": "number", "max_length": 1, "group": "latest", "example": "1"},
       "outs_text": {"description": "Board-ready outs", "type": "string", "max_length": 6, "group": "display", "example": "1 OUT"},
-      "inning_info": {"description": "Board-ready inning and outs", "type": "string", "max_length": 15, "group": "display", "example": "TOP 7TH 1 OUT"},
+      "inning_info": {"description": "Board-ready inning and outs", "type": "string", "max_length": 15, "group": "display", "example": "TOP 7 1 OUT"},
+      "formatted": {"description": "Board-ready score line", "type": "string", "max_length": 22, "group": "display", "example": "TOR  4-3  NYY"},
+      "progress": {"description": "Board-ready game progress", "type": "string", "max_length": 22, "group": "display", "example": "TOP 7TH"},
       "game_count": {"description": "Number of returned games", "type": "number", "max_length": 2, "group": "display", "example": "5"},
       "last_updated": {"description": "UTC fetch timestamp", "type": "string", "max_length": 32, "group": "display", "example": "2026-07-14T12:00:00Z"}
     },
     "arrays": {
-      "games": {"label_field": "formatted", "item_fields": ["game_id", "sport", "league", "source", "state", "status", "phase", "clock", "date", "time", "team1", "team2", "team1_full", "team2_full", "score1", "score2", "team1_color", "team2_color", "team1_result_color", "team2_result_color", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "inning_info", "favorite", "formatted", "progress"]},
-      "fifa": {"label_field": "formatted", "item_fields": ["state", "status", "team1", "team2", "score1", "score2", "formatted", "progress"]},
-      "mlb": {"label_field": "formatted", "item_fields": ["state", "status", "team1", "team2", "score1", "score2", "formatted", "progress"]},
-      "nhl": {"label_field": "formatted", "item_fields": ["state", "status", "team1", "team2", "score1", "score2", "formatted", "progress"]}
+      "games": {
+        "label_field": "formatted",
+        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "team1", "team2", "team1_full", "team2_full", "score1", "score2", "team1_color", "team2_color", "team1_result_color", "team2_result_color", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "inning_info", "favorite", "formatted", "progress"]
+      }
     }
   },
-  "max_lengths": {"games.*.formatted": 22, "games.*.progress": 22, "games.*.team1": 4, "games.*.team2": 4, "games.*.away_short": 4, "games.*.home_short": 4, "games.*.inning_info": 15},
+  "max_lengths": {
+    "games.*.formatted": 22,
+    "games.*.progress": 22,
+    "games.*.away_short": 4,
+    "games.*.home_short": 4,
+    "games.*.inning_info": 15
+  },
   "demo": {
     "flagship": {
-      "name": "Live Sports Demo",
-      "template": ["LIVE SPORTS", "{{live_sports.formatted}}", "{{live_sports.progress}}", "", "", "{{live_sports.game_count}} GAMES"],
+      "name": "MLB Scores Demo",
+      "template": ["MLB SCORES", "{{mlb_scores.formatted}}", "{{mlb_scores.progress}}", "", "", "{{mlb_scores.game_count}} GAMES"],
       "line_metadata": [{"alignment": "center", "wrap": false}, {"alignment": "left", "wrap": false}, {"alignment": "center", "wrap": false}, {"alignment": "left", "wrap": false}, {"alignment": "left", "wrap": false}, {"alignment": "center", "wrap": false}]
     },
     "note": {
-      "name": "Live Sports Note Demo",
-      "template": ["{{live_sports.inning_info}}", "{{live_sports.away_color}} {{live_sports.away_short}} {{live_sports.away_score}}", "{{live_sports.home_color}} {{live_sports.home_short}} {{live_sports.home_score}}"],
-      "line_metadata": [{"alignment": "center", "wrap": false}, {"alignment": "center", "wrap": false}, {"alignment": "center", "wrap": false}]
+      "name": "MLB Scores Note Demo",
+      "template": ["{{mlb_scores.inning_info}}", "{{mlb_scores.away_color}} {{mlb_scores.away_nickname}} {{mlb_scores.away_score}}", "{{mlb_scores.home_color}} {{mlb_scores.home_nickname}} {{mlb_scores.home_score}}"],
+      "line_metadata": [{"alignment": "left", "wrap": false}, {"alignment": "left", "wrap": false}, {"alignment": "left", "wrap": false}]
     }
   }
 }

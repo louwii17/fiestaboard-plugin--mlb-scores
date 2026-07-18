@@ -1,4 +1,4 @@
-"""Shared provider behavior, HTTP handling, and adaptive caching."""
+"""MLB provider HTTP handling and adaptive caching."""
 
 from __future__ import annotations
 

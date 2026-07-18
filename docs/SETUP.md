@@ -1,21 +1,20 @@
-# MLB setup
+# MLB Scores setup
 
 ## Requirements
 
 - FiestaBoard 7.0 or newer.
-- A Vestaboard Flagship or Note already connected to FiestaBoard.
-- Outbound HTTPS access from the FiestaBoard server to
-  `statsapi.mlb.com`.
+- A Vestaboard Flagship or Note connected to FiestaBoard.
+- Outbound HTTPS access to `statsapi.mlb.com`.
 
 No MLB account or API key is required.
 
 ## Install
 
 1. Open FiestaBoard at `http://YOUR-SERVER:4420`.
-2. Go to **Integrations**.
-3. Choose **Install from Git**.
-4. Paste the HTTPS URL for this repository.
-5. Install and enable **Live Sports**.
+2. Go to **Integrations → Install from Git**.
+3. Enter `https://github.com/louwii17/fiestaboard-plugin--mlb-scores`.
+4. Select the `main` branch.
+5. Install and enable **MLB Scores**.
 
 For Docker installations, persist both directories:
 
@@ -25,44 +24,44 @@ volumes:
   - ./external_plugins:/app/external_plugins
 ```
 
-## Configure MLB
+## Configure
 
-1. Set **Sports** to **MLB**.
-2. Select favorite teams under **Favorite MLB teams**.
-3. Set the correct IANA timezone, such as `America/Toronto`.
-4. Keep **Live refresh interval** at 10 seconds initially.
-5. Save the integration.
+1. Select favorite teams.
+2. Set the correct IANA timezone, such as `America/Toronto`.
+3. Keep **Live refresh interval** at 10 seconds initially.
+4. Save the integration.
 
 ## Create a Vestaboard Note page
 
 Create a template page with these three lines:
 
 ```text
-{{live_sports.inning_info}}
-{{live_sports.away_color}} {{live_sports.away_short}} {{live_sports.away_score}}
-{{live_sports.home_color}} {{live_sports.home_short}} {{live_sports.home_score}}
+{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_number, 9) & PADLEFT(mlb_scores.outs & IF(mlb_scores.outs = 1, " OUT", " OUTS"), 6) }}
+{{= mlb_scores.away_color & " " & PAD(mlb_scores.away_nickname, 11) & PADLEFT(mlb_scores.away_score, 2) }}
+{{= mlb_scores.home_color & " " & PAD(mlb_scores.home_nickname, 11) & PADLEFT(mlb_scores.home_score, 2) }}
 ```
 
-Set all three lines to center alignment with wrapping disabled. Save the page,
-return to **Integrations → Live Sports**, and choose it under **Live game
-page**.
+Set all lines to left alignment with wrapping disabled. Save the page, return
+to **Integrations → MLB Scores**, and select it under **Live game page**.
 
 ## Verify
 
-Normal page data can be previewed in FiestaBoard's page editor. Trigger checks
-can also be forced through the local API:
+Force a trigger check through the local API:
 
 ```bash
 curl -X POST http://YOUR-SERVER:4420/api/triggers/check
 curl http://YOUR-SERVER:4420/api/triggers/active
 ```
 
-A takeover only occurs when a selected favorite team's game is reported as
-live. Silence mode still suppresses plugin-triggered pages. A manual page
-change dismisses and temporarily suppresses the active trigger.
+A takeover occurs only when a selected favorite team's game is reported as
+live. Silence mode suppresses plugin triggers. A manual page change dismisses
+and temporarily suppresses an active trigger.
 
 ## Update
 
-Use FiestaBoard's integration update control when available. For a manually
-copied installation, pull or replace the `external_plugins/live_sports`
-folder and restart FiestaBoard.
+Pull the latest code and restart FiestaBoard:
+
+```bash
+git -C /mnt/docker/fiestaboard-plugins/mlb_scores pull --ff-only
+docker restart fiestaboard
+```
