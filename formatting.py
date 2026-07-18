@@ -13,15 +13,17 @@ TEAM_ALIASES = {
     "TORONTO BLUE JAYS": "TOR",
 }
 
-# Vestaboard has six colour tiles: red, orange, yellow, green, blue, and
-# violet. These are deliberately approximate franchise colours; templates
-# can use the result-colour fields instead when win/loss colouring is wanted.
+# MLB's official team stylesheets publish ordered decorative colors at
+# https://brand-colors.mlbstatic.com/v1/team-{team_id}.css. Each entry below
+# uses the closest useful Vestaboard tile to the club's first or second color.
+# A bright secondary is preferred when a dark primary (navy, black, or brown)
+# has no faithful color-tile equivalent on the board.
 TEAM_COLORS = {
     "ARI": "{63}", "ATH": "{66}", "OAK": "{66}", "ATL": "{63}",
-    "BAL": "{64}", "BOS": "{63}", "CHC": "{67}", "CWS": "{67}",
-    "CIN": "{63}", "CLE": "{63}", "COL": "{68}", "DET": "{67}",
+    "BAL": "{64}", "BOS": "{63}", "CHC": "{67}", "CWS": "{69}",
+    "CIN": "{63}", "CLE": "{63}", "COL": "{68}", "DET": "{64}",
     "HOU": "{64}", "KC": "{67}", "LAA": "{63}", "LAD": "{67}",
-    "MIA": "{67}", "MIL": "{67}", "MIN": "{63}", "NYM": "{64}",
+    "MIA": "{67}", "MIL": "{65}", "MIN": "{63}", "NYM": "{64}",
     "NYY": "{67}", "PHI": "{63}", "PIT": "{65}", "SD": "{65}",
     "SEA": "{66}", "SF": "{64}", "STL": "{63}", "TB": "{67}",
     "TEX": "{67}", "TOR": "{67}", "WSH": "{63}",
@@ -119,6 +121,6 @@ def outs_indicators(outs: int | None) -> tuple[str, str]:
     if outs is None:
         return "", ""
     recorded = max(0, min(3, outs))
-    color_indicator = "{63}" * recorded + "{69}" * (3 - recorded)
+    color_indicator = "{69}" * recorded + "-" * (3 - recorded)
     symbol_indicator = "O" * recorded + "-" * (3 - recorded)
     return color_indicator, symbol_indicator

@@ -12,8 +12,10 @@ Vestaboard Flagship or Note.
 - Automatic FiestaBoard page takeover for live favorite games.
 - Separate full name, nickname, abbreviation, score, color, inning, and outs
   variables for custom pages.
+- Team tiles derived from MLB's official first and second brand colors and
+  mapped to the closest useful Vestaboard color.
 - Franchise-color and win/loss-color tiles.
-- Note-safe three-line fallback when no custom trigger page is selected.
+- Template-controlled live-game triggers with no competing hardcoded layout.
 - Stale-cache fallback during temporary MLB API failures.
 
 ## Install from Git
@@ -60,13 +62,18 @@ volumes:
 Only favorite games trigger a takeover. `favorites_only` controls whether
 non-favorite games remain available to ordinary MLB pages.
 
+The live trigger supplies fresh `mlb_scores` variables to the selected page
+without a hardcoded display fallback, so updates retain the page's names,
+alignment, and indicators. If the selected page is missing or invalid, the
+trigger leaves the current display unchanged.
+
 ## Vestaboard Note template
 
 This 15 × 3 template keeps the outs and scores on the trailing edge, uses
 city-free team nicknames, and reserves two cells for each score:
 
 ```text
-{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_number, 9) & PADLEFT(mlb_scores.outs & IF(mlb_scores.outs = 1, " OUT", " OUTS"), 6) }}
+{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_ordinal, 12) & mlb_scores.outs_color_indicator }}
 {{= mlb_scores.away_color & " " & PAD(mlb_scores.away_nickname, 11) & PADLEFT(mlb_scores.away_score, 2) }}
 {{= mlb_scores.home_color & " " & PAD(mlb_scores.home_nickname, 11) & PADLEFT(mlb_scores.home_score, 2) }}
 ```
@@ -120,10 +127,10 @@ The three-position outs indicators render as follows:
 
 | Outs | Color tiles | Symbols |
 | --- | --- | --- |
-| 0 | `{69}{69}{69}` | `---` |
-| 1 | `{63}{69}{69}` | `O--` |
-| 2 | `{63}{63}{69}` | `OO-` |
-| 3 | `{63}{63}{63}` | `OOO` |
+| 0 | `---` | `---` |
+| 1 | `{69}--` | `O--` |
+| 2 | `{69}{69}-` | `OO-` |
+| 3 | `{69}{69}{69}` | `OOO` |
 
 Use the explicit `away_*` and `home_*` fields so the side and display format
 remain unambiguous across live updates. Multiple games are available under
