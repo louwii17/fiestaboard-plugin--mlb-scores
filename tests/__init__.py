@@ -1,1 +1,1 @@
-"""Live Sports plugin tests."""
+"""MLB Scores plugin tests."""

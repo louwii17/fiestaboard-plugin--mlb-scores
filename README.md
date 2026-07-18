@@ -1,148 +1,120 @@
-# Live Sports for FiestaBoard
+# MLB Scores for FiestaBoard
 
-An installable FiestaBoard 7+ plugin for fast, customizable live sports
-pages. The first complete integration is MLB: favorite-team selection,
-10-second live refreshes, Note/Flagship template variables, franchise colour
-tiles, and automatic page takeover while a favorite game is in progress.
+An installable FiestaBoard 7+ plugin for fast, customizable MLB pages on a
+Vestaboard Flagship or Note.
 
-One FiestaBoard plugin with separate provider adapters for live and scheduled
-scores. It currently supports:
+## Features
 
-- MLB via the free, unauthenticated MLB Stats API.
-- NHL via the free, unauthenticated NHL GameCenter API.
-- FIFA World Cup 2026 via OpenLigaDB by default.
-- FIFA World Cup 2026 via API-Sports as an optional keyed provider or fallback.
+- Free MLB Stats API; no account or API key.
+- Favorite-team selection for all 30 MLB clubs.
+- 10-second refreshes near first pitch and while a game is live.
+- Adaptive caching when no live game is near.
+- Automatic FiestaBoard page takeover for live favorite games.
+- Separate full name, nickname, abbreviation, score, color, inning, and outs
+  variables for custom pages.
+- Franchise-color and win/loss-color tiles.
+- Note-safe three-line fallback when no custom trigger page is selected.
+- Stale-cache fallback during temporary MLB API failures.
 
-The plugin exposes one normalized `games` array plus `fifa`, `mlb`, and `nhl`
-arrays. This keeps FiestaBoard templates stable even though each league has a
-different upstream API.
+## Install from Git
 
-MLB data comes directly from MLB's public Stats API and requires no account or
-API key. The integration polls adaptively: slowly when no game is near, and at
-the configured interval (10 seconds by default) near first pitch and while a
-game is live. FiestaBoard only sends changed content to the board.
+In FiestaBoard, open **Integrations → Install from Git** and enter:
 
-## Easiest installation: Git URL
+```text
+https://github.com/louwii17/fiestaboard-plugin--mlb-scores
+```
 
-Push this directory to a public Git repository, then open FiestaBoard and use
-**Integrations → Install from Git**. Paste the repository's HTTPS URL, install
-it, and enable **Live Sports**.
+Use the `main` branch, install the plugin, and enable **MLB Scores**.
 
 The equivalent API request is:
 
 ```bash
 curl -X POST http://YOUR-FIESTABOARD:4420/api/plugins/install \
   -H "Content-Type: application/json" \
-  -d '{"repository":"https://github.com/YOUR-NAME/fiestaboard-plugin--live-sports"}'
+  -d '{"repository":"https://github.com/louwii17/fiestaboard-plugin--mlb-scores","branch":"main"}'
 ```
 
-FiestaBoard clones external plugins into `/app/external_plugins`. Persist that
-directory in Docker alongside `/app/data` so the plugin survives container
-replacement.
-
-## Install by copying the folder
-
-The folder installed into FiestaBoard must be named `live_sports` because the
-folder name and manifest ID must match when it is copied manually.
+For a manual clone, the directory must match the plugin ID:
 
 ```bash
-cd /path/to/FiestaBoard/external_plugins
-git clone YOUR_REPOSITORY_URL live_sports
+git clone https://github.com/louwii17/fiestaboard-plugin--mlb-scores.git mlb_scores
 ```
 
-Alternatively, copy this project from another computer:
+Persist FiestaBoard's external plugin directory in Docker:
 
-```bash
-rsync -av --exclude '.git' fiestaboard-plugin--live-sports/ \
-  user@server:/path/to/FiestaBoard/external_plugins/live_sports/
+```yaml
+volumes:
+  - ./data:/app/data
+  - ./external_plugins:/app/external_plugins
 ```
 
-Restart FiestaBoard using the same method used for its initial deployment,
-then enable **Live Sports** in the plugin settings.
+## Configure
 
-## Configuration
-
-For the initial MLB setup:
-
-1. Select only **MLB** under Sports.
-2. Choose one or more favorite MLB teams.
-3. Keep **Live refresh interval** at 10 seconds.
-4. Set the timezone used for game-day discovery.
+1. Enable **MLB Scores**.
+2. Choose one or more favorite teams.
+3. Set the correct IANA timezone, such as `America/Toronto`.
+4. Keep **Live refresh interval** at 10 seconds initially.
 5. Create a template page for the live game.
-6. Return to the integration and select it under **Live game page**.
+6. Select it under **Live game page**.
 
-MLB favorites use a team picker. FIFA and NHL favorites currently accept
-comma-separated names or abbreviations. `favorites_only` controls normal page
-data; only favorite MLB games can trigger an automatic takeover.
+Only favorite games trigger a takeover. `favorites_only` controls whether
+non-favorite games remain available to ordinary MLB pages.
 
-Use an IANA timezone such as `America/Toronto`. Provider-level caching
-automatically backs off when no game is live.
+## Vestaboard Note template
 
-## Template examples
-
-Vestaboard Note (15 × 3), inning on top:
+This 15 × 3 template keeps the outs and scores on the trailing edge, uses
+city-free team nicknames, and reserves two cells for each score:
 
 ```text
-{{live_sports.inning_info}}
-{{live_sports.away_color}} {{live_sports.away_short}} {{live_sports.away_score}}
-{{live_sports.home_color}} {{live_sports.home_short}} {{live_sports.home_score}}
+{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_number, 9) & PADLEFT(mlb_scores.outs & IF(mlb_scores.outs = 1, " OUT", " OUTS"), 6) }}
+{{= mlb_scores.away_color & " " & PAD(mlb_scores.away_nickname, 11) & PADLEFT(mlb_scores.away_score, 2) }}
+{{= mlb_scores.home_color & " " & PAD(mlb_scores.home_nickname, 11) & PADLEFT(mlb_scores.home_score, 2) }}
 ```
 
-Or move `inning_info` to the third line. Each value is independent, so the
-page editor controls ordering, spacing, alignment, and whether franchise or
-win/loss colors are used.
+Set every line to left alignment with wrapping disabled.
 
-Useful MLB building blocks:
+## Template variables
+
+Useful building blocks include:
 
 ```text
-{{live_sports.away_color}}
-{{live_sports.away_result_color}}
-{{live_sports.away_short}}
-{{live_sports.away_name}}
-{{live_sports.away_nickname}}
-{{live_sports.away_score}}
-{{live_sports.home_color}}
-{{live_sports.home_result_color}}
-{{live_sports.home_short}}
-{{live_sports.home_name}}
-{{live_sports.home_nickname}}
-{{live_sports.home_score}}
-{{live_sports.inning_half}}
-{{live_sports.inning_number}}
-{{live_sports.inning_ordinal}}
-{{live_sports.outs}}
-{{live_sports.outs_text}}
-{{live_sports.inning_info}}
+{{mlb_scores.away_color}}
+{{mlb_scores.away_result_color}}
+{{mlb_scores.away_short}}
+{{mlb_scores.away_name}}
+{{mlb_scores.away_nickname}}
+{{mlb_scores.away_score}}
+{{mlb_scores.home_color}}
+{{mlb_scores.home_result_color}}
+{{mlb_scores.home_short}}
+{{mlb_scores.home_name}}
+{{mlb_scores.home_nickname}}
+{{mlb_scores.home_score}}
+{{mlb_scores.inning_half}}
+{{mlb_scores.inning_number}}
+{{mlb_scores.inning_ordinal}}
+{{mlb_scores.outs}}
+{{mlb_scores.outs_text}}
+{{mlb_scores.inning_info}}
 ```
 
-The franchise color fields are approximations using Vestaboard's six color
-tiles. The result color fields are green for winning, red for losing, yellow
-for tied, and blue before scores are available.
-
-Generic score lines remain available:
-
-```text
-{{live_sports.games[0].formatted}}
-{{live_sports.games[0].progress}}
-```
-
-The compatibility variables `team1`, `team2`, `score1`, and `score2` refer to
-the away and home teams of the highest-priority game. Live games sort first,
-then upcoming games, then completed games.
+Compatibility aliases `team1`, `team2`, `score1`, and `score2` refer to the
+away and home teams of the highest-priority game. Multiple games are available
+under `mlb_scores.games`.
 
 ## Development tests
 
-Copy or clone the plugin into a FiestaBoard checkout at
-`plugins/live_sports`, then run:
+Copy or clone the repository into a FiestaBoard checkout at
+`plugins/mlb_scores`, then run:
 
 ```bash
-python scripts/run_plugin_tests.py --plugin=live_sports --verbose
+python scripts/run_plugin_tests.py --plugin=mlb_scores --verbose
 ```
 
-No real API calls or credentials are used by the test suite.
+No real API calls are used by the test suite.
 
 ## API note
 
-These endpoints are not guaranteed service-level agreements. MLB and NHL are
-public first-party endpoints; OpenLigaDB is community-operated. Keep the
-optional API-Sports path configured if FIFA uptime is especially important.
+MLB's Stats API is public and unauthenticated but does not provide a formal
+service-level agreement. The plugin uses adaptive caching, request timeouts,
+and stale results to avoid blanking a live page during brief outages.

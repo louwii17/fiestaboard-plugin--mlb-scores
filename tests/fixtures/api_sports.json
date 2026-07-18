@@ -1,9 +1,0 @@
-{
-  "errors": [],
-  "response": [{
-    "fixture": {"id": 77, "date": "2026-07-14T20:00:00+00:00", "status": {"long": "Second Half", "short": "2H", "elapsed": 72}},
-    "league": {"round": "Group Stage"},
-    "teams": {"home": {"id": 1, "name": "Canada"}, "away": {"id": 2, "name": "United States"}},
-    "goals": {"home": 1, "away": 2}
-  }]
-}

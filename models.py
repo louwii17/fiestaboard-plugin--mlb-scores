@@ -1,4 +1,4 @@
-"""Provider-neutral models used by the Live Sports plugin."""
+"""Normalized MLB game models used by the MLB Scores plugin."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from typing import Any
 VALID_STATES = {
     "scheduled",
     "live",
-    "intermission",
     "final",
     "postponed",
     "cancelled",
@@ -52,7 +51,7 @@ class Team:
 
 @dataclass
 class Game:
-    """A game normalized across MLB, NHL, and soccer providers."""
+    """An MLB game normalized for FiestaBoard rendering."""
 
     id: str
     sport: str
@@ -76,7 +75,7 @@ class Game:
 
     @property
     def is_live(self) -> bool:
-        return self.state in {"live", "intermission"}
+        return self.state == "live"
 
     @property
     def is_final(self) -> bool:
