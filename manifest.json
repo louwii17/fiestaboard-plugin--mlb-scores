@@ -1,7 +1,7 @@
 {
   "id": "mlb_scores",
   "name": "MLB Scores",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Fast live MLB scores with favorite-team page triggers for Vestaboard",
   "author": "Christopher Louie",
   "repository": "https://github.com/louwii17/fiestaboard-plugin--mlb-scores",
@@ -22,7 +22,7 @@
       "favorite_teams": {
         "type": "array",
         "title": "Favorite MLB teams",
-        "description": "Choose the teams whose live games should take over the board",
+        "description": "Choose the teams whose live games should take over the board; earlier teams have higher takeover priority",
         "default": ["TOR"],
         "items": {
           "type": "string",
@@ -50,12 +50,13 @@
         "minimum": 10,
         "maximum": 900
       },
-      "max_games": {
+      "delay_display_seconds": {
         "type": "integer",
-        "title": "Maximum games",
-        "default": 3,
-        "minimum": 1,
-        "maximum": 10
+        "title": "Delayed game display time",
+        "description": "Seconds to keep a previously live game on the board while it is delayed or suspended; use 0 to return immediately",
+        "default": 300,
+        "minimum": 0,
+        "maximum": 1800
       },
       "timezone": {
         "type": "string",
@@ -153,12 +154,14 @@
       "formatted": {"description": "Board-ready score line", "type": "string", "max_length": 22, "group": "display", "example": "TOR  4-3  NYY"},
       "progress": {"description": "Board-ready game progress", "type": "string", "max_length": 22, "group": "display", "example": "TOP 7TH"},
       "game_count": {"description": "Number of returned games", "type": "number", "max_length": 2, "group": "display", "example": "5"},
+      "favorite_rank": {"description": "Zero-based position of the matching team in Favorite MLB teams", "type": "number", "max_length": 2, "group": "latest", "example": "0"},
+      "favorite_key": {"description": "Configured favorite-team value matched by this game", "type": "string", "max_length": 30, "group": "latest", "example": "TOR"},
       "last_updated": {"description": "UTC fetch timestamp", "type": "string", "max_length": 32, "group": "display", "example": "2026-07-14T12:00:00Z"}
     },
     "arrays": {
       "games": {
         "label_field": "formatted",
-        "item_fields": ["game_id", "state", "status", "phase", "phase_short", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_half_short", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_indicator", "first_base_occupied", "second_base_occupied", "third_base_occupied", "first_base_indicator", "second_base_indicator", "third_base_indicator", "inning_info", "favorite", "formatted", "progress"]
+        "item_fields": ["game_id", "state", "status", "phase", "phase_short", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_half_short", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_indicator", "first_base_occupied", "second_base_occupied", "third_base_occupied", "first_base_indicator", "second_base_indicator", "third_base_indicator", "inning_info", "favorite", "favorite_rank", "favorite_key", "formatted", "progress"]
       }
     }
   },
