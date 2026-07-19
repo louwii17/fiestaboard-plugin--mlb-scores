@@ -2,6 +2,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 from plugins.mlb_scores import MlbScoresPlugin
 from plugins.mlb_scores.models import Game, Team
 from plugins.mlb_scores.providers.base import ProviderError
@@ -9,6 +11,15 @@ from plugins.mlb_scores.providers.base import ProviderError
 
 def manifest():
     return json.loads((Path(__file__).parents[1] / "manifest.json").read_text())
+
+
+@pytest.fixture(autouse=True)
+def fixed_plugin_time(monkeypatch):
+    monkeypatch.setattr(
+        MlbScoresPlugin,
+        "_now",
+        lambda self: datetime(2026, 7, 14, 23, 0, tzinfo=UTC),
+    )
 
 
 def make_game(state="live", favorite_name="Toronto Blue Jays", home_abbr="TOR"):
@@ -44,15 +55,18 @@ class StubProvider:
 
 def test_validate_config():
     plugin = MlbScoresPlugin(manifest())
-    assert plugin.validate_config({"favorite_teams": ["TOR"], "max_games": 3, "timezone": "UTC"}) == []
-    errors = plugin.validate_config({"favorite_teams": 42, "max_games": 99, "timezone": "bad/time"})
-    assert len(errors) == 3
+    assert plugin.validate_config({"favorite_teams": ["TOR"], "timezone": "UTC"}) == []
+    errors = plugin.validate_config({"favorite_teams": 42, "timezone": "bad/time"})
+    assert len(errors) == 2
     assert plugin.validate_config({"timezone": "UTC", "outs_indicator_off": "{0}"}) == []
     assert plugin.validate_config({"timezone": "UTC", "outs_indicator_on": "TOO LONG"}) == [
         "outs_indicator_on must be one character, {0} for blank, or a color code from {63} to {71}"
     ]
     assert plugin.validate_config({"timezone": "UTC", "final_display_seconds": 5}) == [
         "Final score display time must be between 10 and 900 seconds"
+    ]
+    assert plugin.validate_config({"timezone": "UTC", "delay_display_seconds": 1801}) == [
+        "Delayed game display time must be between 0 and 1800 seconds"
     ]
 
 
@@ -163,12 +177,76 @@ def test_favorites_only_filters_games(monkeypatch):
     assert result.data["game_count"] == 1
 
 
+def test_fetch_returns_all_games_without_a_maximum(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
+    games = []
+    for index in range(12):
+        game = make_game(favorite_name=f"Team {index}", home_abbr=f"T{index}")
+        game.id = f"MLB-{index:02d}"
+        games.append(game)
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider(games))
+
+    result = plugin.fetch_data()
+
+    assert result.data["game_count"] == 12
+    assert len(result.data["games"]) == 12
+
+
+def test_page_data_uses_local_day_but_triggers_inspect_full_window(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["BOS"], "timezone": "UTC", "refresh_seconds": 10}
+    today = make_game(state="scheduled")
+    today.id = "TODAY"
+    tomorrow = make_game(state="scheduled", favorite_name="Boston Red Sox", home_abbr="BOS")
+    tomorrow.id = "TOMORROW"
+    tomorrow.start_time += timedelta(days=1)
+    tomorrow_live = make_game(favorite_name="Boston Red Sox", home_abbr="BOS")
+    tomorrow_live.id = "TOMORROW-LIVE"
+    tomorrow_live.start_time += timedelta(days=1)
+    provider = StubProvider([today, tomorrow, tomorrow_live])
+    monkeypatch.setattr(plugin, "_get_provider", lambda: provider)
+    monkeypatch.setattr(plugin, "get_data", plugin.fetch_data)
+
+    result = plugin.fetch_data()
+    triggers = plugin.check_triggers()
+
+    assert [game["game_id"] for game in result.data["games"]] == ["TOMORROW-LIVE", "TODAY"]
+    assert [(trigger.trigger_id, trigger.data["game_id"]) for trigger in triggers] == [
+        ("mlb_scores:BOS", "TOMORROW-LIVE")
+    ]
+
+
+def test_favorite_configuration_order_ranks_games_and_triggers(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {
+        "favorite_teams": ["BOS", "TOR", "NYY"],
+        "timezone": "UTC",
+        "refresh_seconds": 10,
+    }
+    tor = make_game()
+    tor.id = "TOR-GAME"
+    bos = make_game(favorite_name="Boston Red Sox", home_abbr="BOS")
+    bos.id = "BOS-GAME"
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([tor, bos]))
+
+    result = plugin.fetch_data()
+    triggers = plugin.check_triggers()
+
+    assert [game["home_short"] for game in result.data["games"]] == ["BOS", "TOR"]
+    assert [game["favorite_rank"] for game in result.data["games"]] == [0, 1]
+    assert [(trigger.trigger_id, trigger.priority) for trigger in triggers] == [
+        ("mlb_scores:BOS", 50),
+        ("mlb_scores:TOR", 49),
+    ]
+
+
 def test_live_favorite_emits_note_safe_trigger(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
     plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC", "refresh_seconds": 10}
     monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([make_game()]))
     trigger = plugin.check_triggers()[0]
-    assert trigger.trigger_id == "mlb_scores:MLB-1"
+    assert trigger.trigger_id == "mlb_scores:TOR"
     assert trigger.priority == 50
     assert trigger.duration_seconds == 45
     assert trigger.data["home_nickname"] == "BLUE JAYS"
@@ -226,6 +304,58 @@ def test_live_to_final_holds_final_until_configured_deadline(monkeypatch):
 
     now[0] += timedelta(seconds=61)
     assert plugin.check_triggers() == []
+
+
+def test_live_delay_uses_configured_grace_period(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {
+        "favorite_teams": ["TOR"],
+        "timezone": "UTC",
+        "refresh_seconds": 10,
+        "delay_display_seconds": 300,
+    }
+    provider = StubProvider([make_game()])
+    now = [datetime(2026, 7, 14, 23, 0, tzinfo=UTC)]
+    monkeypatch.setattr(plugin, "_now", lambda: now[0])
+    monkeypatch.setattr(plugin, "_get_provider", lambda: provider)
+    monkeypatch.setattr(plugin, "get_data", plugin.fetch_data)
+
+    assert plugin.check_triggers()[0].data["state"] == "live"
+    delayed = make_game(state="delayed")
+    delayed.status = "Rain Delay"
+    delayed.phase = "DELAYED"
+    provider.games = [delayed]
+    assert plugin.check_triggers()[0].duration_seconds == 45
+
+    now[0] += timedelta(seconds=280)
+    assert plugin.check_triggers()[0].duration_seconds == 20
+
+    now[0] += timedelta(seconds=21)
+    assert plugin.check_triggers() == []
+
+
+def test_new_live_doubleheader_game_replaces_same_teams_final_hold(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC", "refresh_seconds": 10}
+    first = make_game()
+    first.id = "GAME-1"
+    provider = StubProvider([first])
+    monkeypatch.setattr(plugin, "_get_provider", lambda: provider)
+    monkeypatch.setattr(plugin, "get_data", plugin.fetch_data)
+
+    assert plugin.check_triggers()[0].data["game_id"] == "GAME-1"
+    first_final = make_game(state="final")
+    first_final.id = "GAME-1"
+    second = make_game()
+    second.id = "GAME-2"
+    second.start_time += timedelta(hours=4)
+    provider.games = [first_final, second]
+
+    trigger = plugin.check_triggers()[0]
+
+    assert trigger.trigger_id == "mlb_scores:TOR"
+    assert trigger.data["game_id"] == "GAME-2"
+    assert trigger.data["state"] == "live"
 
 
 def test_provider_failure_is_unavailable(monkeypatch):

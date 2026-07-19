@@ -29,7 +29,8 @@ volumes:
 1. Select favorite teams.
 2. Set the correct IANA timezone, such as `America/Toronto`.
 3. Keep **Live refresh interval** at 10 seconds initially.
-4. Save the integration.
+4. Set how long a previously live delayed game should remain on the board.
+5. Save the integration.
 
 ## Create a Vestaboard Note page
 

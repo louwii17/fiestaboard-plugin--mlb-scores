@@ -11,6 +11,8 @@ Vestaboard Flagship or Note.
 - Adaptive caching when no live game is near.
 - Automatic FiestaBoard page takeover for live favorite games.
 - Configurable final-score hold before returning to the normal page.
+- Configurable grace period for games delayed after play begins.
+- Local-day game lists with live overnight games retained automatically.
 - Separate full name, nickname, abbreviation, score, color, inning, and outs
   variables for custom pages.
 - Team tiles derived from MLB's official first and second brand colors and
@@ -54,15 +56,21 @@ volumes:
 ## Configure
 
 1. Enable **MLB Scores**.
-2. Choose one or more favorite teams.
+2. Choose one or more favorite teams. Their listed order sets takeover
+   priority when multiple favorites are live; the first team wins.
 3. Set the correct IANA timezone, such as `America/Toronto`.
 4. Keep **Live refresh interval** at 10 seconds initially.
 5. Create a template page for the live game.
 6. Select it under **Live game page**.
 7. Choose how long the page should show the final score under **Final score display time**.
+8. Choose how long a previously live delayed game should remain on the board.
 
 Only favorite games trigger a takeover. `favorites_only` controls whether
-non-favorite games remain available to ordinary MLB pages.
+non-favorite games remain available to ordinary MLB pages. `mlb_scores.games`
+contains the configured timezone's current-day slate, plus any live or delayed
+overnight games and recently completed overnight games. The plugin still
+inspects the complete three-day MLB response when deciding whether a favorite
+game should trigger a takeover.
 
 The live trigger supplies fresh `mlb_scores` variables to the selected page
 without a hardcoded display fallback, so updates retain the page's names,
@@ -76,6 +84,11 @@ final, that same page receives the final score and remains active for the
 configured final-score display time (120 seconds by default). FiestaBoard then
 resumes the page selected by its current schedule, or its current manual page
 when scheduling is disabled.
+
+If a game is delayed or suspended after it has gone live, the page remains
+active for the configured delayed-game display time (five minutes by default).
+Play resuming within that window continues the same takeover. Postponed and
+cancelled games stop renewing their takeover immediately.
 
 ## Vestaboard Note template
 

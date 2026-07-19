@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import math
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from src.plugins.base import PluginBase, PluginResult, TriggerResult
 
@@ -25,14 +27,27 @@ from .providers import MlbProvider, ProviderError
 
 logger = logging.getLogger(__name__)
 
+BASE_TRIGGER_PRIORITY = 50
+MISSING_GAME_GRACE_SECONDS = 90
+
+
+@dataclass
+class GameLifecycle:
+    """Takeover state retained across MLB schedule refreshes."""
+
+    was_live: bool = False
+    last_seen_at: datetime | None = None
+    delay_until: datetime | None = None
+    final_until: datetime | None = None
+
 
 class MlbScoresPlugin(PluginBase):
     """Display MLB games and trigger a custom page for live favorites."""
 
     def __init__(self, manifest: dict[str, Any]):
         self._provider: MlbProvider | None = None
-        self._takeover_game_ids: set[str] = set()
-        self._final_until: dict[str, datetime] = {}
+        self._trigger_games: list[dict[str, Any]] = []
+        self._lifecycles: dict[str, GameLifecycle] = {}
         super().__init__(manifest)
 
     @property
@@ -45,20 +60,18 @@ class MlbScoresPlugin(PluginBase):
         if favorites and not isinstance(favorites, (list, str)):
             errors.append("Favorite teams must be a list of MLB abbreviations")
         try:
-            maximum = int(config.get("max_games", 3))
-            if not 1 <= maximum <= 10:
-                errors.append("Max games must be between 1 and 10")
-        except (TypeError, ValueError):
-            errors.append("Max games must be a number")
-        try:
             final_seconds = int(config.get("final_display_seconds", 120))
             if not 10 <= final_seconds <= 900:
                 errors.append("Final score display time must be between 10 and 900 seconds")
         except (TypeError, ValueError):
             errors.append("Final score display time must be a number")
         try:
-            from zoneinfo import ZoneInfo
-
+            delay_seconds = int(config.get("delay_display_seconds", 300))
+            if not 0 <= delay_seconds <= 1800:
+                errors.append("Delayed game display time must be between 0 and 1800 seconds")
+        except (TypeError, ValueError):
+            errors.append("Delayed game display time must be a number")
+        try:
             ZoneInfo(str(config.get("timezone", "UTC")))
         except Exception:
             errors.append("Timezone must be a valid IANA name, such as America/Toronto")
@@ -83,8 +96,8 @@ class MlbScoresPlugin(PluginBase):
         if self._provider is not None:
             self._provider.clear_cache()
         self._provider = None
-        self._takeover_game_ids.clear()
-        self._final_until.clear()
+        self._trigger_games.clear()
+        self._lifecycles.clear()
 
     def _now(self) -> datetime:
         """Return the current UTC time; isolated for deterministic lifecycle tests."""
@@ -99,13 +112,13 @@ class MlbScoresPlugin(PluginBase):
             return PluginResult(available=False, error=str(exc))
 
         games = self._filter_and_sort(games, now)
-        maximum = int(self.config.get("max_games", 3))
-        selected = games[:maximum]
 
         width = int(getattr(self.board, "width", 22) or 22)
         timezone_name = str(self.config.get("timezone", "UTC"))
         indicators = self._indicator_config()
-        serialized = [self._serialize(game, width, timezone_name, indicators) for game in selected]
+        self._trigger_games = [self._serialize(game, width, timezone_name, indicators) for game in games]
+        relevant_games = [game for game in games if self._is_relevant_game(game, now, timezone_name)]
+        serialized = [self._serialize(game, width, timezone_name, indicators) for game in relevant_games]
         primary = serialized[0] if serialized else self._empty_game()
         data = {
             **primary,
@@ -133,45 +146,79 @@ class MlbScoresPlugin(PluginBase):
         refresh = int(self.config.get("refresh_seconds", 10))
         live_duration = max(45, min(refresh * 3, 180))
         final_display_seconds = int(self.config.get("final_display_seconds", 120))
-        triggers: list[TriggerResult] = []
-        for game in result.data.get("games", []):
+        delay_display_seconds = int(self.config.get("delay_display_seconds", 300))
+        candidates: dict[int, tuple[tuple[Any, ...], TriggerResult]] = {}
+        seen_game_ids: set[str] = set()
+        for game in self._trigger_games:
             if not game.get("favorite"):
                 continue
 
             game_id = str(game["game_id"])
+            seen_game_ids.add(game_id)
             state = str(game.get("state") or "unknown")
+            favorite_rank = int(game.get("favorite_rank") or 0)
+            favorite_key = str(game.get("favorite_key") or favorite_rank)
+            lifecycle = self._lifecycles.setdefault(game_id, GameLifecycle())
+            lifecycle.last_seen_at = now
             duration: int | None = None
 
             if state == "live":
-                self._takeover_game_ids.add(game_id)
-                self._final_until.pop(game_id, None)
-                duration = live_duration
+                if str(game.get("phase") or "") == "FINAL":
+                    state = "final"
+                else:
+                    lifecycle.was_live = True
+                    lifecycle.delay_until = None
+                    lifecycle.final_until = None
+                    duration = live_duration
+            if state == "delayed":
+                lifecycle.final_until = None
+                if lifecycle.was_live and delay_display_seconds > 0:
+                    if lifecycle.delay_until is None:
+                        lifecycle.delay_until = now + timedelta(seconds=delay_display_seconds)
+                    if lifecycle.delay_until > now:
+                        duration = min(
+                            live_duration,
+                            max(1, math.ceil((lifecycle.delay_until - now).total_seconds())),
+                        )
+                    else:
+                        self._lifecycles.pop(game_id, None)
             elif state == "final":
-                if game_id in self._takeover_game_ids and game_id not in self._final_until:
-                    self._final_until[game_id] = now + timedelta(seconds=final_display_seconds)
-                deadline = self._final_until.get(game_id)
+                lifecycle.delay_until = None
+                if lifecycle.was_live and lifecycle.final_until is None:
+                    lifecycle.final_until = now + timedelta(seconds=final_display_seconds)
+                deadline = lifecycle.final_until
                 if deadline is not None and deadline > now:
                     duration = max(1, math.ceil((deadline - now).total_seconds()))
                 elif deadline is not None:
-                    self._final_until.pop(game_id, None)
-                    self._takeover_game_ids.discard(game_id)
+                    self._lifecycles.pop(game_id, None)
             elif state in {"postponed", "cancelled"}:
-                self._final_until.pop(game_id, None)
-                self._takeover_game_ids.discard(game_id)
+                self._lifecycles.pop(game_id, None)
 
             if duration is None:
                 continue
 
-            triggers.append(
-                TriggerResult(
-                    triggered=True,
-                    trigger_id=f"mlb_scores:{game_id}",
-                    priority=50,
-                    duration_seconds=duration,
-                    data=game,
-                )
+            trigger = TriggerResult(
+                triggered=True,
+                # One active slot per favorite lets a newly-live doubleheader
+                # replace that team's final-hold candidate immediately.
+                trigger_id=f"mlb_scores:{favorite_key}",
+                # FiestaBoard only arbitrates triggers by integer priority,
+                # so encode the user's favorite-team order below NOTABLE.
+                priority=max(1, BASE_TRIGGER_PRIORITY - favorite_rank),
+                duration_seconds=duration,
+                data=game,
             )
-        return triggers
+            candidate_key = self._trigger_candidate_key(game, state)
+            current = candidates.get(favorite_rank)
+            if current is None or candidate_key < current[0]:
+                candidates[favorite_rank] = (candidate_key, trigger)
+
+        stale_before = now - timedelta(seconds=max(MISSING_GAME_GRACE_SECONDS, live_duration * 2))
+        for game_id, lifecycle in list(self._lifecycles.items()):
+            if game_id not in seen_game_ids and lifecycle.last_seen_at and lifecycle.last_seen_at < stale_before:
+                self._lifecycles.pop(game_id, None)
+
+        return [candidate[1] for _, candidate in sorted(candidates.items())]
 
     def _get_provider(self) -> MlbProvider:
         if self._provider is None:
@@ -197,39 +244,75 @@ class MlbScoresPlugin(PluginBase):
         favorites_only = bool(self.config.get("favorites_only", False))
         result: list[Game] = []
         for game in games:
-            favorite = self._is_favorite(game)
-            game.details["favorite"] = favorite
-            if not favorites_only or favorite:
+            favorite_match = self._favorite_match(game)
+            favorite_rank = favorite_match[0] if favorite_match is not None else None
+            game.details["favorite"] = favorite_rank is not None
+            game.details["favorite_rank"] = favorite_rank
+            game.details["favorite_key"] = favorite_match[1] if favorite_match is not None else ""
+            if not favorites_only or favorite_rank is not None:
                 result.append(game)
         return sorted(result, key=lambda game: self._sort_key(game, now))
 
-    def _is_favorite(self, game: Game) -> bool:
+    def _favorite_match(self, game: Game) -> tuple[int, str] | None:
+        """Return the matching team's zero-based rank and normalized config key."""
         raw = self.config.get("favorite_teams", [])
         values = raw if isinstance(raw, list) else str(raw).split(",")
-        wanted = {board_text(str(value)) for value in values if str(value).strip()}
-        if not wanted:
-            return False
         names = {board_text(game.home.name), board_text(game.away.name)}
         abbreviations = {board_text(game.home.abbreviation), board_text(game.away.abbreviation)}
-        for token in wanted:
+        for rank, value in enumerate(values):
+            if not str(value).strip():
+                continue
+            token = board_text(str(value))
             if token in abbreviations or token in names:
-                return True
+                return rank, token
             if len(token) > 4 and any(token in name or name in token for name in names):
-                return True
-        return False
+                return rank, token
+        return None
+
+    @staticmethod
+    def _is_relevant_game(game: Game, now: datetime, timezone_name: str) -> bool:
+        """Keep the local-day slate plus active and recent overnight games."""
+        try:
+            timezone = ZoneInfo(timezone_name)
+        except Exception:
+            timezone = ZoneInfo("UTC")
+        local_today = now.astimezone(timezone).date()
+        local_game_date = game.start_time.astimezone(timezone).date()
+        if game.state in {"live", "delayed"}:
+            return True
+        if local_game_date == local_today:
+            return True
+        return (
+            game.state == "final"
+            and local_game_date == local_today - timedelta(days=1)
+            and 0 <= (now - game.start_time).total_seconds() <= 12 * 60 * 60
+        )
+
+    @staticmethod
+    def _trigger_candidate_key(game: dict[str, Any], effective_state: str) -> tuple[Any, ...]:
+        """Rank one takeover candidate within a single favorite team."""
+        state_rank = {"live": 0, "delayed": 1, "final": 2}.get(effective_state, 3)
+        try:
+            started_at = datetime.fromisoformat(str(game.get("start_time") or ""))
+            recent_rank = -started_at.timestamp()
+        except (TypeError, ValueError):
+            recent_rank = 0.0
+        return state_rank, recent_rank, str(game.get("game_id") or "")
 
     @staticmethod
     def _sort_key(game: Game, now: datetime) -> tuple[Any, ...]:
         priority = {
             "live": 0,
-            "scheduled": 1,
-            "delayed": 2,
+            "delayed": 1,
+            "scheduled": 2,
             "final": 3,
             "postponed": 4,
             "cancelled": 5,
             "unknown": 6,
         }.get(game.state, 6)
-        favorite_rank = 0 if game.details.get("favorite") else 1
+        favorite_rank = game.details.get("favorite_rank")
+        if favorite_rank is None:
+            favorite_rank = 10_000
         distance = abs((game.start_time - now).total_seconds())
         return priority, favorite_rank, distance, game.start_time, game.id
 
@@ -311,6 +394,8 @@ class MlbScoresPlugin(PluginBase):
             "third_base_indicator": indicators["base_indicator_on"] if third_base_occupied else indicators["base_indicator_off"],
             "inning_info": board_text(inning_info)[:width],
             "favorite": bool(game.details.get("favorite")),
+            "favorite_rank": game.details.get("favorite_rank"),
+            "favorite_key": str(game.details.get("favorite_key") or ""),
             "formatted": format_score(game, width),
             "progress": format_progress(game, width, timezone_name),
         }
@@ -329,7 +414,8 @@ class MlbScoresPlugin(PluginBase):
             "first_base_occupied": False, "second_base_occupied": False,
             "third_base_occupied": False, "first_base_indicator": "",
             "second_base_indicator": "", "third_base_indicator": "",
-            "inning_info": "", "formatted": "", "progress": "",
+            "inning_info": "", "favorite": False, "favorite_rank": None,
+            "favorite_key": "", "formatted": "", "progress": "",
         }
 
     @staticmethod
