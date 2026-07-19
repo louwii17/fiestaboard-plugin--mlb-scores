@@ -53,7 +53,10 @@ def test_outs_indicator_and_custom_cells():
     assert outs_indicator(2) == "{69}{69}."
     assert outs_indicator(3) == "{69}{69}{69}"
     assert outs_indicator(1, "X", "-") == "X--"
+    assert outs_indicator(1, "{69}", indicator_cell("{0}", ".")) == "{69}  "
+    assert indicator_cell("{0}", ".") == " "
     assert indicator_cell("{65}", ".") == "{65}"
+    assert indicator_cell("{36}", ".") == "."
     assert indicator_cell(" ", ".") == " "
     assert indicator_cell("TOO LONG", ".") == "."
 

@@ -58,6 +58,36 @@ def test_mlb_status_variants(fixture, fake_session):
     assert provider._parse_game(raw).state == "postponed"
 
 
+def test_mlb_treats_warmup_as_scheduled_and_hides_pregame_inning(fixture, fake_session):
+    raw = fixture("mlb")["dates"][0]["games"][0]
+    raw["status"] = {"abstractGameState": "Live", "detailedState": "Warmup"}
+    raw["linescore"].update({
+        "currentInning": 1,
+        "currentInningOrdinal": "1st",
+        "inningState": "Top",
+    })
+
+    game = MlbProvider(session=fake_session())._parse_game(raw)
+
+    assert game.state == "scheduled"
+    assert game.status == "Warmup"
+    assert game.phase == "WARMUP"
+
+
+def test_mlb_preserves_full_bottom_in_phase(fixture, fake_session):
+    raw = fixture("mlb")["dates"][0]["games"][0]
+    raw["linescore"].update({
+        "currentInning": 1,
+        "currentInningOrdinal": "1st",
+        "inningState": "Bottom",
+    })
+
+    game = MlbProvider(session=fake_session())._parse_game(raw)
+
+    assert game.phase == "BOTTOM 1ST"
+    assert game.details["inning_half"] == "Bottom"
+
+
 def test_mlb_skips_middle_ninth_when_home_team_has_already_won(fixture, fake_session):
     raw = fixture("mlb")["dates"][0]["games"][0]
     raw["status"] = {"abstractGameState": "Live", "detailedState": "In Progress"}

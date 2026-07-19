@@ -74,7 +74,7 @@
       "outs_indicator_on": {
         "type": "string",
         "title": "Recorded out marker",
-        "description": "One character or Vestaboard code used for each recorded out",
+        "description": "One character, {0} for blank, or color code {63}-{71} used for each recorded out",
         "default": "{69}",
         "minLength": 1,
         "maxLength": 4
@@ -82,7 +82,7 @@
       "outs_indicator_off": {
         "type": "string",
         "title": "Open out marker",
-        "description": "One character or Vestaboard code used for each unrecorded out",
+        "description": "One character, {0} for blank, or color code {63}-{71} used for each unrecorded out",
         "default": ".",
         "minLength": 1,
         "maxLength": 4
@@ -90,7 +90,7 @@
       "base_indicator_on": {
         "type": "string",
         "title": "Occupied base marker",
-        "description": "One character or Vestaboard code used for an occupied base",
+        "description": "One character, {0} for blank, or color code {63}-{71} used for an occupied base",
         "default": "{65}",
         "minLength": 1,
         "maxLength": 4
@@ -98,7 +98,7 @@
       "base_indicator_off": {
         "type": "string",
         "title": "Empty base marker",
-        "description": "One character or Vestaboard code used for an empty base",
+        "description": "One character, {0} for blank, or color code {63}-{71} used for an empty base",
         "default": ".",
         "minLength": 1,
         "maxLength": 4
@@ -122,7 +122,8 @@
       "game_id": {"description": "Stable MLB game identifier", "type": "string", "max_length": 12, "group": "latest", "example": "777123"},
       "state": {"description": "Normalized game state", "type": "string", "max_length": 12, "group": "latest", "example": "live"},
       "status": {"description": "MLB game status", "type": "string", "max_length": 20, "group": "latest", "example": "In Progress"},
-      "phase": {"description": "Board-ready game phase such as TOP 7TH or FINAL", "type": "string", "max_length": 12, "group": "latest", "example": "TOP 7TH"},
+      "phase": {"description": "Full game phase such as BOTTOM 1ST or FINAL", "type": "string", "max_length": 12, "group": "latest", "example": "BOTTOM 1ST"},
+      "phase_short": {"description": "Compact game phase such as BOT 1ST or FINAL", "type": "string", "max_length": 12, "group": "latest", "example": "BOT 1ST"},
       "away_short": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
       "away_name": {"description": "Away team full name", "type": "string", "max_length": 30, "group": "latest", "example": "Toronto Blue Jays"},
       "away_nickname": {"description": "Away team name without its city", "type": "string", "max_length": 16, "group": "latest", "example": "Blue Jays"},
@@ -136,6 +137,7 @@
       "home_color": {"description": "Home franchise color tile", "type": "string", "max_length": 4, "group": "display", "example": "{67}"},
       "home_result_color": {"description": "Home win/loss color tile", "type": "string", "max_length": 4, "group": "display", "example": "{63}"},
       "inning_half": {"description": "TOP, MIDDLE, BOTTOM, or END", "type": "string", "max_length": 6, "group": "latest", "example": "TOP"},
+      "inning_half_short": {"description": "Compact inning half: TOP, MID, BOT, or END", "type": "string", "max_length": 3, "group": "latest", "example": "BOT"},
       "inning_number": {"description": "Current inning number", "type": "number", "max_length": 2, "group": "latest", "example": "7"},
       "inning_ordinal": {"description": "Current inning ordinal", "type": "string", "max_length": 4, "group": "latest", "example": "7TH"},
       "outs": {"description": "Current number of outs", "type": "number", "max_length": 1, "group": "latest", "example": "1"},
@@ -156,7 +158,7 @@
     "arrays": {
       "games": {
         "label_field": "formatted",
-        "item_fields": ["game_id", "state", "status", "phase", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_indicator", "first_base_occupied", "second_base_occupied", "third_base_occupied", "first_base_indicator", "second_base_indicator", "third_base_indicator", "inning_info", "favorite", "formatted", "progress"]
+        "item_fields": ["game_id", "state", "status", "phase", "phase_short", "date", "time", "away_short", "away_name", "away_nickname", "away_score", "away_color", "away_result_color", "home_short", "home_name", "home_nickname", "home_score", "home_color", "home_result_color", "inning_half", "inning_half_short", "inning_number", "inning_ordinal", "outs", "outs_text", "outs_indicator", "first_base_occupied", "second_base_occupied", "third_base_occupied", "first_base_indicator", "second_base_indicator", "third_base_indicator", "inning_info", "favorite", "formatted", "progress"]
       }
     }
   },

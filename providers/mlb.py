@@ -59,6 +59,11 @@ class MlbProvider(BaseProvider):
             state = "cancelled"
         elif "delay" in detail_lower or "suspend" in detail_lower:
             state = "delayed"
+        elif detail_lower == "warmup":
+            # MLB marks warmups with abstractGameState=Live even though play
+            # has not started. Keep it scheduled so it cannot trigger a live
+            # favorite-team takeover.
+            state = "scheduled"
         elif abstract == "live" or detail_lower in {"in progress", "manager challenge"}:
             state = "live"
         elif abstract == "final":
@@ -87,7 +92,11 @@ class MlbProvider(BaseProvider):
             and home.score > away.score
         )
         phase = " ".join(part for part in (inning_state, inning_ordinal) if part).upper()
-        if state == "final" or home_won_after_top:
+        if state == "scheduled":
+            # Pregame linescores can already say "Top 1st". The detailed
+            # status is the meaningful phase until the game actually begins.
+            phase = detailed.upper()
+        elif state == "final" or home_won_after_top:
             phase = "FINAL"
 
         return Game(

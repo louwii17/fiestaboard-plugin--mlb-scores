@@ -117,12 +117,17 @@ def team_color(abbreviation: str) -> str:
 
 
 def indicator_cell(value: object, default: str) -> str:
-    """Return one literal board character or one numeric VBML character code."""
+    """Return one literal board character or one supported tile marker."""
     text = str(value) if value is not None else ""
     if len(text) == 1:
         return text
+    # FiestaBoard's text renderer recognizes only color markers {63}-{71}.
+    # Passing {0} through renders its braces as blanks and its zero as a
+    # visible character, so normalize the blank character code to one space.
+    if text == "{0}":
+        return " "
     match = re.fullmatch(r"\{(\d{1,2})\}", text)
-    if match and 0 <= int(match.group(1)) <= 71:
+    if match and 63 <= int(match.group(1)) <= 71:
         return text
     return default
 
