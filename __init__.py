@@ -265,11 +265,11 @@ class MlbScoresPlugin(PluginBase):
         first_base_occupied = bool(game.details.get("first_base_occupied"))
         second_base_occupied = bool(game.details.get("second_base_occupied"))
         third_base_occupied = bool(game.details.get("third_base_occupied"))
-        phase_short = (
-            f"BOT{game.phase[len('BOTTOM') :]}"
-            if game.phase.startswith("BOTTOM")
-            else game.phase
-        )
+        phase_short = game.phase
+        for full_phase, short_phase in (("BOTTOM", "BOT"), ("MIDDLE", "MID")):
+            if game.phase.startswith(full_phase):
+                phase_short = f"{short_phase}{game.phase[len(full_phase) :]}"
+                break
         inning_info = (
             "FINAL"
             if game.state == "final" or game.phase == "FINAL"
