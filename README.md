@@ -10,6 +10,7 @@ Vestaboard Flagship or Note.
 - 10-second refreshes near first pitch and while a game is live.
 - Adaptive caching when no live game is near.
 - Automatic FiestaBoard page takeover for live favorite games.
+- Configurable final-score hold before returning to the normal page.
 - Separate full name, nickname, abbreviation, score, color, inning, and outs
   variables for custom pages.
 - Team tiles derived from MLB's official first and second brand colors and
@@ -58,6 +59,7 @@ volumes:
 4. Keep **Live refresh interval** at 10 seconds initially.
 5. Create a template page for the live game.
 6. Select it under **Live game page**.
+7. Choose how long the page should show the final score under **Final score display time**.
 
 Only favorite games trigger a takeover. `favorites_only` controls whether
 non-favorite games remain available to ordinary MLB pages.
@@ -67,13 +69,21 @@ without a hardcoded display fallback, so updates retain the page's names,
 alignment, and indicators. If the selected page is missing or invalid, the
 trigger leaves the current display unchanged.
 
+**Live game page** is a FiestaBoard page picker. It tells the plugin which of
+your existing template pages to render for an automatic favorite-game
+takeover; it does not create another page. When the game changes from live to
+final, that same page receives the final score and remains active for the
+configured final-score display time (120 seconds by default). FiestaBoard then
+resumes the page selected by its current schedule, or its current manual page
+when scheduling is disabled.
+
 ## Vestaboard Note template
 
 This 15 × 3 template keeps the outs and scores on the trailing edge, uses
 city-free team nicknames, and reserves two cells for each score:
 
 ```text
-{{= PAD(UPPER(mlb_scores.inning_half) & " " & mlb_scores.inning_ordinal, 12) & mlb_scores.outs_indicator }}
+{{= PAD(mlb_scores.phase, 12) & IF(mlb_scores.phase = "FINAL", "   ", mlb_scores.outs_indicator) }}
 {{= mlb_scores.away_color & " " & PAD(mlb_scores.away_nickname, 11) & PADLEFT(mlb_scores.away_score, 2) }}
 {{= mlb_scores.home_color & " " & PAD(mlb_scores.home_nickname, 11) & PADLEFT(mlb_scores.home_score, 2) }}
 ```

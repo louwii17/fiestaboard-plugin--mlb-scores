@@ -58,6 +58,41 @@ def test_mlb_status_variants(fixture, fake_session):
     assert provider._parse_game(raw).state == "postponed"
 
 
+def test_mlb_skips_middle_ninth_when_home_team_has_already_won(fixture, fake_session):
+    raw = fixture("mlb")["dates"][0]["games"][0]
+    raw["status"] = {"abstractGameState": "Live", "detailedState": "In Progress"}
+    raw["linescore"].update({
+        "currentInning": 9,
+        "currentInningOrdinal": "9th",
+        "inningState": "Middle",
+        "outs": 3,
+    })
+    raw["teams"]["home"]["score"] = 5
+    raw["teams"]["away"]["score"] = 4
+
+    game = MlbProvider(session=fake_session())._parse_game(raw)
+
+    assert game.state == "live"
+    assert game.phase == "FINAL"
+
+
+def test_mlb_keeps_middle_ninth_when_home_team_is_not_ahead(fixture, fake_session):
+    raw = fixture("mlb")["dates"][0]["games"][0]
+    raw["status"] = {"abstractGameState": "Live", "detailedState": "In Progress"}
+    raw["linescore"].update({
+        "currentInning": 9,
+        "currentInningOrdinal": "9th",
+        "inningState": "Middle",
+        "outs": 3,
+    })
+    raw["teams"]["home"]["score"] = 4
+    raw["teams"]["away"]["score"] = 4
+
+    game = MlbProvider(session=fake_session())._parse_game(raw)
+
+    assert game.phase == "MIDDLE 9TH"
+
+
 def test_mlb_clears_bases_at_three_outs(fixture, fake_session):
     raw = fixture("mlb")["dates"][0]["games"][0]
     raw["linescore"]["outs"] = 3

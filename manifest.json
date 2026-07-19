@@ -1,7 +1,7 @@
 {
   "id": "mlb_scores",
   "name": "MLB Scores",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Fast live MLB scores with favorite-team page triggers for Vestaboard",
   "author": "Christopher Louie",
   "repository": "https://github.com/louwii17/fiestaboard-plugin--mlb-scores",
@@ -39,8 +39,16 @@
       "trigger_page_id": {
         "type": "string",
         "title": "Live game page",
-        "description": "Template page shown automatically while a favorite team is playing; required for live-game takeovers",
+        "description": "Existing template page shown automatically while a favorite team is live and during the final-score hold",
         "ui:widget": "page-picker"
+      },
+      "final_display_seconds": {
+        "type": "integer",
+        "title": "Final score display time",
+        "description": "Seconds to keep the live game page showing FINAL before returning to the current schedule or manual page",
+        "default": 120,
+        "minimum": 10,
+        "maximum": 900
       },
       "max_games": {
         "type": "integer",
@@ -114,6 +122,7 @@
       "game_id": {"description": "Stable MLB game identifier", "type": "string", "max_length": 12, "group": "latest", "example": "777123"},
       "state": {"description": "Normalized game state", "type": "string", "max_length": 12, "group": "latest", "example": "live"},
       "status": {"description": "MLB game status", "type": "string", "max_length": 20, "group": "latest", "example": "In Progress"},
+      "phase": {"description": "Board-ready game phase such as TOP 7TH or FINAL", "type": "string", "max_length": 12, "group": "latest", "example": "TOP 7TH"},
       "away_short": {"description": "Away team abbreviation", "type": "string", "max_length": 4, "group": "latest", "example": "TOR"},
       "away_name": {"description": "Away team full name", "type": "string", "max_length": 30, "group": "latest", "example": "Toronto Blue Jays"},
       "away_nickname": {"description": "Away team name without its city", "type": "string", "max_length": 16, "group": "latest", "example": "Blue Jays"},

@@ -71,15 +71,25 @@ class MlbProvider(BaseProvider):
         linescore = raw.get("linescore") or {}
         inning_state = str(linescore.get("inningState", ""))
         inning_ordinal = str(linescore.get("currentInningOrdinal", ""))
+        inning = as_int(linescore.get("currentInning"))
         outs = as_int(linescore.get("outs"))
         offense = linescore.get("offense") or {}
         show_bases = state in {"live", "delayed"} and outs != 3
-        phase = " ".join(part for part in (inning_state, inning_ordinal) if part).upper()
-        if state == "final":
-            phase = "FINAL"
-
         home = self._team(teams["home"])
         away = self._team(teams["away"])
+        home_won_after_top = (
+            state == "live"
+            and inning_state.lower() == "middle"
+            and inning is not None
+            and inning >= 9
+            and home.score is not None
+            and away.score is not None
+            and home.score > away.score
+        )
+        phase = " ".join(part for part in (inning_state, inning_ordinal) if part).upper()
+        if state == "final" or home_won_after_top:
+            phase = "FINAL"
+
         return Game(
             id=str(game_id),
             sport="MLB",
@@ -93,7 +103,7 @@ class MlbProvider(BaseProvider):
             home=home,
             away=away,
             details={
-                "inning": as_int(linescore.get("currentInning")),
+                "inning": inning,
                 "inning_half": inning_state,
                 "inning_ordinal": inning_ordinal,
                 "outs": outs,

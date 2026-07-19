@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from plugins.mlb_scores import MlbScoresPlugin
@@ -12,10 +12,11 @@ def manifest():
 
 
 def make_game(state="live", favorite_name="Toronto Blue Jays", home_abbr="TOR"):
+    is_final = state == "final"
     return Game(
         id="MLB-1", sport="MLB", league="MLB", source="stub",
         start_time=datetime(2026, 7, 14, 20, 0, tzinfo=UTC),
-        state=state, status="Live", phase="TOP 7TH", clock="",
+        state=state, status="Final" if is_final else "Live", phase="FINAL" if is_final else "TOP 7TH", clock="",
         home=Team("1", favorite_name, home_abbr, 3, "Blue Jays"),
         away=Team("2", "New York Yankees", "NYY", 2, "Yankees"),
         details={
@@ -48,6 +49,9 @@ def test_validate_config():
     assert len(errors) == 3
     assert plugin.validate_config({"timezone": "UTC", "outs_indicator_on": "TOO LONG"}) == [
         "outs_indicator_on must be one character or one Vestaboard code such as {65}"
+    ]
+    assert plugin.validate_config({"timezone": "UTC", "final_display_seconds": 5}) == [
+        "Final score display time must be between 10 and 900 seconds"
     ]
 
 
@@ -96,6 +100,20 @@ def test_custom_indicator_markers(monkeypatch):
     assert result.data["second_base_indicator"] == " "
 
 
+def test_effective_final_phase_replaces_middle_inning_info(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
+    game = make_game()
+    game.phase = "FINAL"
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([game]))
+
+    result = plugin.fetch_data()
+
+    assert result.data["state"] == "live"
+    assert result.data["phase"] == "FINAL"
+    assert result.data["inning_info"] == "FINAL"
+
+
 def test_favorites_only_filters_games(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
     plugin.config = {"favorite_teams": ["TOR"], "favorites_only": True, "timezone": "UTC"}
@@ -122,6 +140,36 @@ def test_non_live_favorite_does_not_trigger(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
     plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
     monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([make_game(state="final")]))
+    assert plugin.check_triggers() == []
+
+
+def test_live_to_final_holds_final_until_configured_deadline(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {
+        "favorite_teams": ["TOR"],
+        "timezone": "UTC",
+        "refresh_seconds": 10,
+        "final_display_seconds": 120,
+    }
+    provider = StubProvider([make_game()])
+    now = [datetime(2026, 7, 14, 23, 0, tzinfo=UTC)]
+    monkeypatch.setattr(plugin, "_now", lambda: now[0])
+    monkeypatch.setattr(plugin, "_get_provider", lambda: provider)
+    monkeypatch.setattr(plugin, "get_data", plugin.fetch_data)
+
+    assert plugin.check_triggers()[0].data["state"] == "live"
+
+    provider.games = [make_game(state="final")]
+    final_trigger = plugin.check_triggers()[0]
+    assert final_trigger.data["state"] == "final"
+    assert final_trigger.data["phase"] == "FINAL"
+    assert final_trigger.data["inning_info"] == "FINAL"
+    assert final_trigger.duration_seconds == 120
+
+    now[0] += timedelta(seconds=60)
+    assert plugin.check_triggers()[0].duration_seconds == 60
+
+    now[0] += timedelta(seconds=61)
     assert plugin.check_triggers() == []
 
 
