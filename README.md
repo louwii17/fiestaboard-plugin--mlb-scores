@@ -107,7 +107,10 @@ Useful building blocks include:
 {{mlb_scores.home_name}}
 {{mlb_scores.home_nickname}}
 {{mlb_scores.home_score}}
+{{mlb_scores.phase}}
+{{mlb_scores.phase_short}}
 {{mlb_scores.inning_half}}
+{{mlb_scores.inning_half_short}}
 {{mlb_scores.inning_number}}
 {{mlb_scores.inning_ordinal}}
 {{mlb_scores.outs}}
@@ -125,8 +128,8 @@ Useful building blocks include:
 By default, each base indicator is a yellow tile (`{65}`) when occupied and a
 period when empty. The outs indicator defaults to a white tile (`{69}`) for a
 recorded out and a period for an open position. Change the on/off markers under
-the integration settings using one character or a Vestaboard code such as
-`{63}`. The matching base Boolean can still be used with `IF()` for page-specific
+the integration settings using one character, `{0}` for a blank tile, or a
+color code from `{63}` through `{71}`. The matching base Boolean can still be used with `IF()` for page-specific
 styling. To draw the traditional diamond yourself, place second base above third
 and first base:
 

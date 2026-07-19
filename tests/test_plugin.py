@@ -47,8 +47,9 @@ def test_validate_config():
     assert plugin.validate_config({"favorite_teams": ["TOR"], "max_games": 3, "timezone": "UTC"}) == []
     errors = plugin.validate_config({"favorite_teams": 42, "max_games": 99, "timezone": "bad/time"})
     assert len(errors) == 3
+    assert plugin.validate_config({"timezone": "UTC", "outs_indicator_off": "{0}"}) == []
     assert plugin.validate_config({"timezone": "UTC", "outs_indicator_on": "TOO LONG"}) == [
-        "outs_indicator_on must be one character or one Vestaboard code such as {65}"
+        "outs_indicator_on must be one character, {0} for blank, or a color code from {63} to {71}"
     ]
     assert plugin.validate_config({"timezone": "UTC", "final_display_seconds": 5}) == [
         "Final score display time must be between 10 and 900 seconds"
@@ -83,6 +84,22 @@ def test_fetch_exposes_mlb_building_blocks(monkeypatch):
     assert "score2" not in result.data
 
 
+def test_fetch_exposes_full_and_short_phase(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
+    game = make_game()
+    game.phase = "BOTTOM 1ST"
+    game.details["inning_half"] = "Bottom"
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([game]))
+
+    result = plugin.fetch_data()
+
+    assert result.data["phase"] == "BOTTOM 1ST"
+    assert result.data["phase_short"] == "BOT 1ST"
+    assert result.data["inning_half"] == "BOTTOM"
+    assert result.data["inning_half_short"] == "BOT"
+
+
 def test_custom_indicator_markers(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
     plugin.config = {
@@ -98,6 +115,20 @@ def test_custom_indicator_markers(monkeypatch):
     assert result.data["outs_indicator"] == "X--"
     assert result.data["first_base_indicator"] == "{66}"
     assert result.data["second_base_indicator"] == " "
+
+
+def test_blank_character_code_renders_as_one_open_out_cell(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {
+        "favorite_teams": ["TOR"],
+        "timezone": "UTC",
+        "outs_indicator_off": "{0}",
+    }
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([make_game()]))
+
+    result = plugin.fetch_data()
+
+    assert result.data["outs_indicator"] == "{69}  "
 
 
 def test_effective_final_phase_replaces_middle_inning_info(monkeypatch):
@@ -140,6 +171,21 @@ def test_non_live_favorite_does_not_trigger(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
     plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
     monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([make_game(state="final")]))
+    assert plugin.check_triggers() == []
+
+
+def test_warmup_favorite_does_not_trigger(monkeypatch):
+    plugin = MlbScoresPlugin(manifest())
+    plugin.config = {"favorite_teams": ["TOR"], "timezone": "UTC"}
+    game = make_game(state="scheduled")
+    game.status = "Warmup"
+    game.phase = "WARMUP"
+    monkeypatch.setattr(plugin, "_get_provider", lambda: StubProvider([game]))
+
+    result = plugin.fetch_data()
+    assert result.data["state"] == "scheduled"
+    assert result.data["status"] == "Warmup"
+    assert result.data["phase"] == "WARMUP"
     assert plugin.check_triggers() == []
 
 

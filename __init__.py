@@ -69,8 +69,14 @@ class MlbScoresPlugin(PluginBase):
             "base_indicator_off": ".",
         }
         for key, default in indicator_defaults.items():
-            if key in config and indicator_cell(config[key], default) != str(config[key]):
-                errors.append(f"{key} must be one character or one Vestaboard code such as {{65}}")
+            if key in config:
+                raw_indicator = str(config[key])
+                normalized_indicator = indicator_cell(config[key], default)
+                if normalized_indicator != raw_indicator and raw_indicator != "{0}":
+                    errors.append(
+                        f"{key} must be one character, {{0}} for blank, "
+                        "or a color code from {63} to {71}"
+                    )
         return errors
 
     def on_config_change(self, old_config: dict[str, Any], new_config: dict[str, Any]) -> None:
@@ -243,6 +249,10 @@ class MlbScoresPlugin(PluginBase):
         away_color = team_color(away_short)
         home_color = team_color(home_short)
         inning_half = board_text(str(game.details.get("inning_half") or ""))
+        inning_half_short = {
+            "BOTTOM": "BOT",
+            "MIDDLE": "MID",
+        }.get(inning_half, inning_half)
         inning_number = game.details.get("inning")
         inning_ordinal = board_text(str(game.details.get("inning_ordinal") or ""))
         outs = game.details.get("outs")
@@ -255,6 +265,11 @@ class MlbScoresPlugin(PluginBase):
         first_base_occupied = bool(game.details.get("first_base_occupied"))
         second_base_occupied = bool(game.details.get("second_base_occupied"))
         third_base_occupied = bool(game.details.get("third_base_occupied"))
+        phase_short = (
+            f"BOT{game.phase[len('BOTTOM') :]}"
+            if game.phase.startswith("BOTTOM")
+            else game.phase
+        )
         inning_info = (
             "FINAL"
             if game.state == "final" or game.phase == "FINAL"
@@ -265,6 +280,7 @@ class MlbScoresPlugin(PluginBase):
             "state": game.state,
             "status": game.status,
             "phase": game.phase,
+            "phase_short": phase_short,
             "date": date,
             "time": local_time,
             "start_time": game.start_time.isoformat(),
@@ -281,6 +297,7 @@ class MlbScoresPlugin(PluginBase):
             "home_color": home_color,
             "home_result_color": home_result_color,
             "inning_half": inning_half,
+            "inning_half_short": inning_half_short,
             "inning_number": inning_number,
             "inning_ordinal": inning_ordinal,
             "outs": outs,
@@ -301,11 +318,13 @@ class MlbScoresPlugin(PluginBase):
     @staticmethod
     def _empty_game() -> dict[str, Any]:
         return {
-            "game_id": "", "state": "", "status": "", "phase": "", "date": "", "time": "",
+            "game_id": "", "state": "", "status": "", "phase": "", "phase_short": "",
+            "date": "", "time": "",
             "away_short": "", "away_name": "", "away_nickname": "", "away_score": None,
             "away_color": "", "away_result_color": "", "home_short": "", "home_name": "",
             "home_nickname": "", "home_score": None, "home_color": "", "home_result_color": "",
-            "inning_half": "", "inning_number": None, "inning_ordinal": "", "outs": None,
+            "inning_half": "", "inning_half_short": "", "inning_number": None,
+            "inning_ordinal": "", "outs": None,
             "outs_text": "", "outs_indicator": "",
             "first_base_occupied": False, "second_base_occupied": False,
             "third_base_occupied": False, "first_base_indicator": "",
