@@ -99,6 +99,15 @@ def test_fetch_exposes_full_and_short_phase(monkeypatch):
     assert result.data["inning_half"] == "BOTTOM"
     assert result.data["inning_half_short"] == "BOT"
 
+    game.phase = "MIDDLE 1ST"
+    game.details["inning_half"] = "Middle"
+    result = plugin.fetch_data()
+
+    assert result.data["phase"] == "MIDDLE 1ST"
+    assert result.data["phase_short"] == "MID 1ST"
+    assert result.data["inning_half"] == "MIDDLE"
+    assert result.data["inning_half_short"] == "MID"
+
 
 def test_custom_indicator_markers(monkeypatch):
     plugin = MlbScoresPlugin(manifest())
