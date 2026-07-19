@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+import math
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.plugins.base import PluginBase, PluginResult, TriggerResult
@@ -29,8 +30,10 @@ class MlbScoresPlugin(PluginBase):
     """Display MLB games and trigger a custom page for live favorites."""
 
     def __init__(self, manifest: dict[str, Any]):
-        super().__init__(manifest)
         self._provider: MlbProvider | None = None
+        self._takeover_game_ids: set[str] = set()
+        self._final_until: dict[str, datetime] = {}
+        super().__init__(manifest)
 
     @property
     def plugin_id(self) -> str:
@@ -47,6 +50,12 @@ class MlbScoresPlugin(PluginBase):
                 errors.append("Max games must be between 1 and 10")
         except (TypeError, ValueError):
             errors.append("Max games must be a number")
+        try:
+            final_seconds = int(config.get("final_display_seconds", 120))
+            if not 10 <= final_seconds <= 900:
+                errors.append("Final score display time must be between 10 and 900 seconds")
+        except (TypeError, ValueError):
+            errors.append("Final score display time must be a number")
         try:
             from zoneinfo import ZoneInfo
 
@@ -68,9 +77,15 @@ class MlbScoresPlugin(PluginBase):
         if self._provider is not None:
             self._provider.clear_cache()
         self._provider = None
+        self._takeover_game_ids.clear()
+        self._final_until.clear()
+
+    def _now(self) -> datetime:
+        """Return the current UTC time; isolated for deterministic lifecycle tests."""
+        return datetime.now(UTC)
 
     def fetch_data(self) -> PluginResult:
-        now = datetime.now(UTC)
+        now = self._now()
         try:
             games = self._get_provider().get_games(now)
         except ProviderError as exc:
@@ -103,21 +118,48 @@ class MlbScoresPlugin(PluginBase):
         return result.formatted_lines if result.available else None
 
     def check_triggers(self) -> list[TriggerResult]:
-        """Keep one native FiestaBoard override active per live favorite game."""
+        """Keep an override active for live favorites and briefly after final."""
         result = self.get_data()
         if not result.available or not result.data:
             return []
 
+        now = self._now()
         refresh = int(self.config.get("refresh_seconds", 10))
-        duration = max(45, min(refresh * 3, 180))
+        live_duration = max(45, min(refresh * 3, 180))
+        final_display_seconds = int(self.config.get("final_display_seconds", 120))
         triggers: list[TriggerResult] = []
         for game in result.data.get("games", []):
-            if not game.get("favorite") or game.get("state") != "live":
+            if not game.get("favorite"):
                 continue
+
+            game_id = str(game["game_id"])
+            state = str(game.get("state") or "unknown")
+            duration: int | None = None
+
+            if state == "live":
+                self._takeover_game_ids.add(game_id)
+                self._final_until.pop(game_id, None)
+                duration = live_duration
+            elif state == "final":
+                if game_id in self._takeover_game_ids and game_id not in self._final_until:
+                    self._final_until[game_id] = now + timedelta(seconds=final_display_seconds)
+                deadline = self._final_until.get(game_id)
+                if deadline is not None and deadline > now:
+                    duration = max(1, math.ceil((deadline - now).total_seconds()))
+                elif deadline is not None:
+                    self._final_until.pop(game_id, None)
+                    self._takeover_game_ids.discard(game_id)
+            elif state in {"postponed", "cancelled"}:
+                self._final_until.pop(game_id, None)
+                self._takeover_game_ids.discard(game_id)
+
+            if duration is None:
+                continue
+
             triggers.append(
                 TriggerResult(
                     triggered=True,
-                    trigger_id=f"mlb_scores:{game['game_id']}",
+                    trigger_id=f"mlb_scores:{game_id}",
                     priority=50,
                     duration_seconds=duration,
                     data=game,
@@ -213,7 +255,11 @@ class MlbScoresPlugin(PluginBase):
         first_base_occupied = bool(game.details.get("first_base_occupied"))
         second_base_occupied = bool(game.details.get("second_base_occupied"))
         third_base_occupied = bool(game.details.get("third_base_occupied"))
-        inning_info = " ".join(part for part in (inning_half, str(inning_number or ""), outs_text) if part)
+        inning_info = (
+            "FINAL"
+            if game.state == "final" or game.phase == "FINAL"
+            else " ".join(part for part in (inning_half, str(inning_number or ""), outs_text) if part)
+        )
         return {
             "game_id": game.id,
             "state": game.state,
